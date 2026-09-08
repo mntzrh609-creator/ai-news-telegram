@@ -6,6 +6,9 @@ import re
 from difflib import SequenceMatcher
 
 OPENAI_KEY = os.environ["OPENAI_API_KEY"]
+TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+
+CHANNEL = "@MH999R"
 
 # =========================
 # مصادر الأخبار
@@ -136,9 +139,6 @@ def verified_groups(groups):
             for article in group
         )
 
-        # نعتبر الخبر أكثر موثوقية
-        # إذا ورد من مصدرين مستقلين أو أكثر
-
         if len(sources) >= 2:
 
             verified.append({
@@ -252,31 +252,60 @@ def analyze_news(verified):
 
 
 # =========================
-# تشغيل الاختبار
+# إرسال إلى تيليغرام
+# =========================
+
+def send_to_telegram(message):
+
+    telegram_url = (
+        f"https://api.telegram.org/bot"
+        f"{TELEGRAM_TOKEN}/sendMessage"
+    )
+
+    data = {
+        "chat_id": CHANNEL,
+        "text": message
+    }
+
+    response = requests.post(
+        telegram_url,
+        data=data,
+        timeout=30
+    )
+
+    print("\n📨 Telegram Status:", response.status_code)
+    print(response.text)
+
+    if response.status_code == 200:
+
+        print("✅ تم إرسال الخبر إلى تيليغرام بنجاح")
+        return True
+
+    print("❌ فشل إرسال الخبر إلى تيليغرام")
+    return False
+
+
+# =========================
+# تشغيل النظام
 # =========================
 
 print("====================================")
-print("📰 نظام الأخبار - اختبار التحقق")
+print("📰 نظام الأخبار - اختبار النشر")
 print("====================================")
 
 news = get_news()
 
-print(f"\n📊 مجموع الأخبار التي تم جلبها: {len(news)}")
+print(f"\n📊 مجموع الأخبار: {len(news)}")
 
 if not news:
-
     print("❌ لم يتم العثور على أخبار")
     raise SystemExit
 
-
-# تجميع الأخبار المتشابهة
 
 groups = group_news(news)
 
 print(f"🔗 مجموع مجموعات الأخبار: {len(groups)}")
 
-
-# التحقق من وجود أكثر من مصدر
 
 verified = verified_groups(groups)
 
@@ -284,29 +313,40 @@ print(
     f"✅ الأخبار التي لديها مصدران أو أكثر: {len(verified)}"
 )
 
-
 if not verified:
 
     print("⚠️ لا توجد أخبار مؤكدة من أكثر من مصدر.")
-    print("⚠️ لن يتم إرسال أي شيء.")
+    print("⚠️ لن يتم النشر.")
     raise SystemExit
 
-
-# تحليل الذكاء الاصطناعي
 
 result = analyze_news(verified)
 
 
-if result:
+if not result:
 
-    print("\n====================================")
-    print("🤖 الأخبار المهمة بعد التحقق والتحليل")
-    print("====================================")
+    print("❌ لم ينتج الذكاء الاصطناعي أي خبر.")
+    raise SystemExit
 
-    print(result)
+
+print("\n====================================")
+print("🤖 الخبر/الأخبار المختارة")
+print("====================================")
+
+print(result)
+
+
+# =========================
+# اختبار النشر
+# =========================
+
+print("\n====================================")
+print("📨 محاولة النشر في تيليغرام")
+print("====================================")
+
+send_to_telegram(result)
 
 
 print("\n====================================")
 print("✅ انتهى الاختبار")
-print("⚠️ لم يتم النشر في تيليغرام")
 print("====================================")
