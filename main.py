@@ -2,75 +2,217 @@ import os
 import requests
 import feedparser
 import json
+import re
+from difflib import SequenceMatcher
 
 OPENAI_KEY = os.environ["OPENAI_API_KEY"]
 
+# =========================
 # مصادر الأخبار
+# =========================
+
 FEEDS = {
-    "العراق": "https://feeds.bbci.co.uk/news/topics/ce1qrvle14rt/rss.xml",
-    "العالم": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "BBC World": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "BBC Iraq": "https://feeds.bbci.co.uk/news/topics/ce1qrvle14rt/rss.xml",
+    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
+    "Reuters": "https://news.google.com/rss/search?q=site%3Areuters.com%2Fworld&hl=en-US&gl=US&ceid=US%3Aen",
 }
 
-# عدد الأخبار التي نأخذها من كل مصدر
-MAX_NEWS_PER_SOURCE = 5
+MAX_NEWS_PER_SOURCE = 10
 
+
+# =========================
+# تنظيف النص
+# =========================
+
+def normalize_text(text):
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+# =========================
+# جلب الأخبار
+# =========================
 
 def get_news():
+
     news = []
 
-    for category, feed_url in FEEDS.items():
-        print(f"\n🔎 جلب أخبار {category}...")
+    for source, feed_url in FEEDS.items():
 
-        feed = feedparser.parse(feed_url)
+        print(f"\n🔎 جلب أخبار من: {source}")
 
-        for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
-            title = entry.get("title", "").strip()
-            link = entry.get("link", "").strip()
-            summary = entry.get("summary", "").strip()
+        try:
+            feed = feedparser.parse(feed_url)
 
-            if title:
+            count = 0
+
+            for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
+
+                title = entry.get("title", "").strip()
+                summary = entry.get("summary", "").strip()
+                link = entry.get("link", "").strip()
+
+                if not title:
+                    continue
+
                 news.append({
-                    "category": category,
+                    "source": source,
                     "title": title,
                     "summary": summary,
                     "link": link
                 })
 
+                count += 1
+
+            print(f"   ✅ تم جلب {count} خبر")
+
+        except Exception as e:
+            print(f"   ❌ خطأ في المصدر: {e}")
+
     return news
 
 
-def analyze_news(news):
-    news_text = json.dumps(news, ensure_ascii=False, indent=2)
+# =========================
+# مقارنة الأخبار
+# =========================
+
+def similarity(text1, text2):
+
+    return SequenceMatcher(
+        None,
+        normalize_text(text1),
+        normalize_text(text2)
+    ).ratio()
+
+
+# =========================
+# تجميع الأخبار المتشابهة
+# =========================
+
+def group_news(news):
+
+    groups = []
+
+    for article in news:
+
+        added = False
+
+        for group in groups:
+
+            main_article = group[0]
+
+            score = similarity(
+                article["title"],
+                main_article["title"]
+            )
+
+            if score >= 0.55:
+
+                group.append(article)
+                added = True
+                break
+
+        if not added:
+            groups.append([article])
+
+    return groups
+
+
+# =========================
+# التحقق من تعدد المصادر
+# =========================
+
+def verified_groups(groups):
+
+    verified = []
+
+    for group in groups:
+
+        sources = set(
+            article["source"]
+            for article in group
+        )
+
+        # نعتبر الخبر أكثر موثوقية
+        # إذا ورد من مصدرين مستقلين أو أكثر
+
+        if len(sources) >= 2:
+
+            verified.append({
+                "articles": group,
+                "sources": list(sources)
+            })
+
+    return verified
+
+
+# =========================
+# تحليل الذكاء الاصطناعي
+# =========================
+
+def analyze_news(verified):
+
+    stories = []
+
+    for item in verified:
+
+        articles_text = []
+
+        for article in item["articles"]:
+
+            articles_text.append({
+                "source": article["source"],
+                "title": article["title"],
+                "summary": article["summary"]
+            })
+
+        stories.append({
+            "sources": item["sources"],
+            "articles": articles_text
+        })
+
+    news_text = json.dumps(
+        stories,
+        ensure_ascii=False,
+        indent=2
+    )
 
     prompt = f"""
-أنت محرر أخبار محترف.
+أنت محرر أخبار محترف ومسؤول عن قناة إخبارية.
 
-مهمتك تحليل الأخبار التالية واختيار الأخبار المهمة فقط.
+حلل الأخبار التي تم التحقق منها من أكثر من مصدر.
 
-القواعد:
+القواعد الصارمة:
 
 1. العراق + العالم فقط.
-2. اختر الأخبار المهمة ذات التأثير السياسي أو الأمني أو الاقتصادي أو الإنساني أو الدولي.
-3. تجاهل الأخبار الخفيفة والترفيهية والرياضية والأخبار غير المهمة.
-4. لا تكرر نفس الحدث.
-5. لا تخترع أي معلومة.
-6. لا تضف أرقامًا غير موجودة في المصادر.
-7. يجب الحفاظ على الأرقام والمعلومات المهمة.
-8. يجب التأكد من أن الخبر واضح ومسنود بالمصدر المتاح.
-9. إذا كان الخبر غير واضح أو لا يمكن الاعتماد عليه، استبعده.
-10. لا تضع رابطًا في النص النهائي.
+2. اختر الأخبار المهمة فقط.
+3. الأولوية للأخبار السياسية والأمنية والاقتصادية والإنسانية والدولية.
+4. تجاهل الأخبار الخفيفة والترفيهية والرياضية.
+5. لا تكرر نفس الحدث.
+6. لا تخترع أي معلومة.
+7. لا تضف أي رقم غير موجود في المصادر.
+8. حافظ على الأرقام والمعلومات المهمة.
+9. استخدم المعلومات التي تؤكدها المصادر فقط.
+10. إذا كان هناك اختلاف بين المصادر، لا تحسم المعلومة من عندك.
+11. لا تنشر خبراً غير واضح.
+12. لا تضع روابط.
+13. يجب أن يبدأ كل خبر بـ 🔴.
+14. اذكر المصدر في بداية الخبر.
+15. اجعل الخبر مختصراً وواضحاً.
+16. لا تذكر أنه تم التحقق من الخبر.
+17. لا تكتب مقدمة أو شرحاً خارج الأخبار.
 
-صيغة النشر المطلوبة:
+صيغة النشر:
 
 🔴 المصدر: نص الخبر المختصر والواضح.
 
-يجب أن يبدأ كل خبر بـ 🔴.
-
-اذكر اسم المصدر في بداية الخبر.
-
 أعد فقط الأخبار التي تستحق النشر.
 
-الأخبار:
+الأخبار المتحقق منها:
+
 {news_text}
 """
 
@@ -87,49 +229,82 @@ def analyze_news(news):
         timeout=120
     )
 
-    print("\nOpenAI Status:", response.status_code)
+    print("\n🤖 OpenAI Status:", response.status_code)
 
     if response.status_code != 200:
+
         print("❌ فشل OpenAI")
         print(response.text)
+
         return None
 
     data = response.json()
 
-    # استخراج النص من Responses API
     output_text = data.get("output_text")
 
     if not output_text:
+
         print("❌ لم يتم الحصول على نص من OpenAI")
-        print(json.dumps(data, ensure_ascii=False, indent=2))
+
         return None
 
     return output_text.strip()
 
 
 # =========================
-# تشغيل النظام
+# تشغيل الاختبار
 # =========================
 
 print("====================================")
-print("📰 نظام الأخبار - مرحلة التحليل")
+print("📰 نظام الأخبار - اختبار التحقق")
 print("====================================")
 
 news = get_news()
 
-print(f"\n✅ تم جلب {len(news)} خبرًا")
+print(f"\n📊 مجموع الأخبار التي تم جلبها: {len(news)}")
 
 if not news:
+
     print("❌ لم يتم العثور على أخبار")
     raise SystemExit
 
-result = analyze_news(news)
+
+# تجميع الأخبار المتشابهة
+
+groups = group_news(news)
+
+print(f"🔗 مجموع مجموعات الأخبار: {len(groups)}")
+
+
+# التحقق من وجود أكثر من مصدر
+
+verified = verified_groups(groups)
+
+print(
+    f"✅ الأخبار التي لديها مصدران أو أكثر: {len(verified)}"
+)
+
+
+if not verified:
+
+    print("⚠️ لا توجد أخبار مؤكدة من أكثر من مصدر.")
+    print("⚠️ لن يتم إرسال أي شيء.")
+    raise SystemExit
+
+
+# تحليل الذكاء الاصطناعي
+
+result = analyze_news(verified)
+
 
 if result:
+
     print("\n====================================")
-    print("🤖 الأخبار التي اختارها الذكاء الاصطناعي")
+    print("🤖 الأخبار المهمة بعد التحقق والتحليل")
     print("====================================")
+
     print(result)
+
 
 print("\n====================================")
 print("✅ انتهى الاختبار")
