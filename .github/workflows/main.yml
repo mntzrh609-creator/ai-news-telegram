@@ -38,9 +38,18 @@ jobs:
         run: python main.py
 
       - name: حفظ سجلات النظام
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ ! -f seen_news.json ]; then
+            echo '{"version":3,"ids":[],"events":[]}' > seen_news.json
+          fi
+
+          if [ ! -f openai_state.json ]; then
+            echo '{"last_attempt":null}' > openai_state.json
+          fi
 
           git add seen_news.json openai_state.json
 
