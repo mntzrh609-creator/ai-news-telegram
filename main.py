@@ -1,26 +1,40 @@
-name: Telegram Bot Test
+import os
+import requests
 
-on:
-  workflow_dispatch:
+OPENAI_KEY = os.environ["OPENAI_API_KEY"]
+TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+CHANNEL = "@MH999R"
 
-    steps:
-      - name: تحميل الملفات
-        uses: actions/checkout@v4
+headers = {
+    "Authorization": f"Bearer {OPENAI_KEY}"
+}
 
-      - name: إعداد Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+response = requests.get(
+    "https://api.openai.com/v1/models",
+    headers=headers,
+    timeout=30
+)
 
-      - name: تثبيت المكتبات
-        run: pip install -r requirements.txt
+print("OpenAI Status:", response.status_code)
 
-      - name: تشغيل اختبار التليغرام
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        run: python main.py
+if response.status_code == 200:
+    message = "🔴 تم اختبار الاتصال بنجاح — نظام الذكاء الاصطناعي جاهز للعمل."
+else:
+    message = f"❌ فشل اختبار OpenAI. Status: {response.status_code}"
+
+telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+data = {
+    "chat_id": CHANNEL,
+    "text": message
+}
+
+telegram_response = requests.post(
+    telegram_url,
+    data=data,
+    timeout=30
+)
+
+print("Telegram Status:", telegram_response.status_code)
+print(telegram_response.text)
