@@ -1,6 +1,9 @@
 name: Telegram Bot Test
 
 on:
+  schedule:
+    - cron: "*/30 * * * *"
+
   workflow_dispatch:
 
 jobs:
@@ -19,7 +22,7 @@ jobs:
       - name: تثبيت المكتبات
         run: pip install -r requirements.txt
 
-      - name: تشغيل اختبار التليغرام
+      - name: تشغيل النظام
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
