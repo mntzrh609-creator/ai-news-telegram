@@ -1,40 +1,46 @@
-import os
-import requests
+import feedparser
 
-OPENAI_KEY = os.environ["OPENAI_API_KEY"]
-TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-
-CHANNEL = "@MH999R"
-
-headers = {
-    "Authorization": f"Bearer {OPENAI_KEY}"
+# مصادر الأخبار
+FEEDS = {
+    "🇮🇶 أخبار العراق": "https://feeds.bbci.co.uk/news/topics/ce1qrvle14rt/rss.xml",
+    "🌍 أخبار العالم": "https://feeds.bbci.co.uk/news/world/rss.xml",
 }
 
-response = requests.get(
-    "https://api.openai.com/v1/models",
-    headers=headers,
-    timeout=30
-)
+print("================================")
+print("🔎 بدء اختبار جلب الأخبار")
+print("================================")
 
-print("OpenAI Status:", response.status_code)
+total = 0
 
-if response.status_code == 200:
-    message = "🔴 تم اختبار الاتصال بنجاح — نظام الذكاء الاصطناعي جاهز للعمل."
-else:
-    message = f"❌ فشل اختبار OpenAI. Status: {response.status_code}"
+for source_name, feed_url in FEEDS.items():
 
-telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    print(f"\n{source_name}")
+    print("-" * 40)
 
-data = {
-    "chat_id": CHANNEL,
-    "text": message
-}
+    try:
+        feed = feedparser.parse(feed_url)
 
-telegram_response = requests.post(
-    telegram_url,
-    data=data,
-    timeout=30
-)
+        if feed.bozo:
+            print("⚠️ توجد مشكلة في قراءة المصدر")
 
-print("Telegram Status:", telegram_response.status_code)
-print(telegram_response.text)
+        entries = feed.entries[:5]
+
+        if not entries:
+            print("❌ لم يتم العثور على أخبار")
+            continue
+
+        for i, entry in enumerate(entries, 1):
+            title = entry.get("title", "بدون عنوان")
+            link = entry.get("link", "")
+
+            print(f"{i}. {title}")
+            print(f"   {link}")
+
+            total += 1
+
+    except Exception as e:
+        print(f"❌ خطأ: {e}")
+
+print("\n================================")
+print(f"✅ مجموع الأخبار التي تم جلبها: {total}")
+print("================================")
