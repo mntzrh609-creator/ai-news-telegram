@@ -16,18 +16,14 @@ OPENAI_KEY = os.environ["OPENAI_API_KEY"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHANNEL = "@MH999R"
 
-# النظام يعمل كل 5 دقائق، لكن GitHub قد يؤخر التشغيل قليلاً.
 MAX_NEWS_PER_SOURCE = 8
 MAX_POSTS_PER_RUN = 5
-
-# نقرأ الأخبار الحديثة فقط حتى لا تعود أخبار قديمة من RSS.
 MAX_AGE_HOURS = 12
 
-# سجل دائم للأخبار المنشورة.
 SEEN_FILE = "seen_news.json"
 MAX_SEEN_EVENTS = 2500
 
-# أولوية قصوى لإيران/أمريكا، ثم الأخبار السياسية العاجلة والمهمة.
+
 IRAN_US = [
     "إيران", "الإيراني", "الإيرانية", "طهران",
     "أمريكا", "الولايات المتحدة", "واشنطن", "ترامب",
@@ -66,12 +62,12 @@ ARABIC_STOP = {
     "ضمن", "عبر", "وفق", "بسبب", "أثناء", "أمس", "غدًا"
 }
 
-# كلمات عامة جداً لا تساعد في معرفة هل الخبر نفسه أم لا.
 GENERIC_WORDS = {
     "خبر", "أخبار", "آخر", "اخر", "الجديد", "الجديدة", "تفاصيل",
     "تطورات", "تصريحات", "يعلن", "تعلن", "اعلن", "أعلن", "قال",
     "تقول", "بحسب", "مصدر", "مصادر", "صحيفة", "وكالة", "اليوم"
 }
+
 
 session = requests.Session()
 session.headers.update({
@@ -81,11 +77,11 @@ session.headers.update({
 
 def norm(text):
     text = (text or "").lower()
+
     text = re.sub(r"https?://\S+", " ", text)
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
 
-    # توحيد أشكال الحروف العربية.
     text = (
         text.replace("أ", "ا")
             .replace("إ", "ا")
@@ -96,17 +92,25 @@ def norm(text):
     )
 
     text = re.sub(r"[^a-zA-Z0-9\u0600-\u06FF\s]", " ", text)
+
     return re.sub(r"\s+", " ", text).strip()
 
 
 def words(text):
     result = set()
+
     for word in norm(text).split():
         if len(word) <= 2:
             continue
-        if word in ARABIC_STOP or word in GENERIC_WORDS:
+
+        if word in ARABIC_STOP:
             continue
+
+        if word in GENERIC_WORDS:
+            continue
+
         result.add(word)
+
     return result
 
 
@@ -132,6 +136,7 @@ def similarity(a, b):
 
 def source_domain(source):
     website = (source.get("website") or "").strip()
+
     if not website:
         return ""
 
@@ -140,33 +145,32 @@ def source_domain(source):
     except Exception:
         host = website.lower()
 
-    host = host.removeprefix("www.")
-    return host
+    return host.removeprefix("www.")
 
 
 def family(source):
-    """
-    يجعل النسخ التابعة للمؤسسة نفسها عائلة واحدة.
-    مثلاً: الحرة والحرة العراق لا تُحسبان مؤسستين مستقلتين.
-    """
     domain = source_domain(source)
 
     aliases = {
         "alhurra.com": "alhurra",
         "alhurra-iraq.com": "alhurra",
+
         "alarabiya.net": "alarabiya",
         "alhadath.net": "alarabiya",
+
         "aljazeera.net": "aljazeera",
+
         "reuters.com": "reuters",
+
         "bbc.com": "bbc",
         "bbc.co.uk": "bbc",
+
         "skynewsarabia.com": "skynewsarabia",
     }
 
     if domain in aliases:
         return aliases[domain]
 
-    # معالجة نطاقات فرعية.
     for key, value in aliases.items():
         if domain.endswith("." + key):
             return value
@@ -180,34 +184,53 @@ def article_id(article):
         article.get("title", ""),
         article.get("link", "")
     ])
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    return hashlib.sha256(
+        raw.encode("utf-8")
+    ).hexdigest()
 
 
 def event_text(article):
-    return (article.get("title", "") + " " + article.get("summary", "")).strip()
+    return (
+        article.get("title", "") +
+        " " +
+        article.get("summary", "")
+    ).strip()
 
 
 def event_hash(text):
-    normalized = " ".join(sorted(words(text)))
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    normalized = " ".join(
+        sorted(words(text))
+    )
+
+    return hashlib.sha256(
+        normalized.encode("utf-8")
+    ).hexdigest()
 
 
 def load_seen():
-    """
-    متوافق مع السجل القديم إذا كان عبارة عن قائمة hashes،
-    ومع السجل الجديد إذا كان JSON يحتوي events.
-    """
+
     try:
         with open(SEEN_FILE, encoding="utf-8") as f:
             data = json.load(f)
+
     except Exception:
-        return {"ids": set(), "events": []}
+        return {
+            "ids": set(),
+            "events": []
+        }
 
     if isinstance(data, list):
-        return {"ids": set(data), "events": []}
+        return {
+            "ids": set(data),
+            "events": []
+        }
 
     if not isinstance(data, dict):
-        return {"ids": set(), "events": []}
+        return {
+            "ids": set(),
+            "events": []
+        }
 
     ids = set(data.get("ids", []))
     events = data.get("events", [])
@@ -216,14 +239,19 @@ def load_seen():
         events = []
 
     clean_events = []
+
     for item in events:
         if isinstance(item, dict) and item.get("title"):
             clean_events.append(item)
 
-    return {"ids": ids, "events": clean_events}
+    return {
+        "ids": ids,
+        "events": clean_events
+    }
 
 
 def save_seen(seen):
+
     data = {
         "version": 2,
         "ids": list(seen["ids"])[-5000:],
@@ -231,13 +259,16 @@ def save_seen(seen):
     }
 
     with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
 
 
 def already_seen(article, seen):
-    """
-    يمنع التكرار حتى لو تغيّر عنوان الخبر أو جاء من مصدر آخر.
-    """
+
     aid = article_id(article)
 
     if aid in seen["ids"]:
@@ -246,12 +277,19 @@ def already_seen(article, seen):
     candidate = event_text(article)
 
     for old in seen["events"]:
+
         old_title = old.get("title", "")
         old_text = old.get("text", old_title)
 
-        # تشابه قوي جداً = نفس الخبر غالباً.
-        score_title = similarity(article.get("title", ""), old_title)
-        score_full = similarity(candidate, old_text)
+        score_title = similarity(
+            article.get("title", ""),
+            old_title
+        )
+
+        score_full = similarity(
+            candidate,
+            old_text
+        )
 
         if score_title >= 0.84:
             return True
@@ -259,8 +297,8 @@ def already_seen(article, seen):
         if score_full >= 0.82:
             return True
 
-        # إذا اتفق العنوانان على كيانات/أحداث أساسية مع تشابه جيد.
         common = words(candidate) & words(old_text)
+
         if len(common) >= 4 and score_full >= 0.68:
             return True
 
@@ -268,29 +306,38 @@ def already_seen(article, seen):
 
 
 def remember_group(group, final_text, seen):
-    """
-    بعد نجاح النشر فقط، نحفظ كل مقالات المجموعة + بصمة الحدث النهائي.
-    """
-    for article in group:
-        seen["ids"].add(article_id(article))
 
-    clean_final = re.sub(r"^🔴\s*", "", final_text).strip()
+    for article in group:
+        seen["ids"].add(
+            article_id(article)
+        )
+
+    clean_final = re.sub(
+        r"^🔴\s*",
+        "",
+        final_text
+    ).strip()
+
     seen["events"].append({
         "hash": event_hash(clean_final),
         "title": clean_final,
         "text": clean_final,
-        "time": datetime.now(timezone.utc).isoformat()
+        "time": datetime.now(
+            timezone.utc
+        ).isoformat()
     })
 
-    # تنظيف الذاكرة.
-    seen["ids"] = set(list(seen["ids"])[-5000:])
-    seen["events"] = seen["events"][-MAX_SEEN_EVENTS:]
+    seen["ids"] = set(
+        list(seen["ids"])[-5000:]
+    )
+
+    seen["events"] = seen["events"][
+        -MAX_SEEN_EVENTS:
+    ]
 
 
 def published_time(entry):
-    """
-    يحاول قراءة وقت الخبر من RSS.
-    """
+
     parsed = (
         entry.get("published_parsed")
         or entry.get("updated_parsed")
@@ -298,12 +345,15 @@ def published_time(entry):
     )
 
     if parsed:
+
         try:
             import calendar
+
             return datetime.fromtimestamp(
                 calendar.timegm(parsed),
                 tz=timezone.utc
             )
+
         except Exception:
             pass
 
@@ -311,169 +361,292 @@ def published_time(entry):
 
 
 def priority(article):
-    text = norm(event_text(article))
+
+    text = norm(
+        event_text(article)
+    )
+
     score = 0
 
-    # أولوية إيران/أمريكا.
     for key in IRAN_US:
         if norm(key) in text:
             score += 8
 
-    # سياسة.
     for key in POLITICAL:
         if norm(key) in text:
             score += 2
 
-    # عاجل/تصعيد.
     for key in BREAKING:
         if norm(key) in text:
             score += 5
 
-    # مكافأة بسيطة للخبر الأحدث إذا كان الوقت معروفاً.
     if article.get("published_at"):
+
         age_minutes = max(
             0,
-            (datetime.now(timezone.utc) - article["published_at"]).total_seconds() / 60
+            (
+                datetime.now(timezone.utc)
+                - article["published_at"]
+            ).total_seconds() / 60
         )
-        score += max(0, 20 - int(age_minutes / 10))
+
+        score += max(
+            0,
+            20 - int(age_minutes / 10)
+        )
 
     return score
 
 
 def is_political(article):
-    text = norm(event_text(article))
+
+    text = norm(
+        event_text(article)
+    )
 
     political_hits = sum(
-        1 for key in POLITICAL
+        1
+        for key in POLITICAL
         if norm(key) in text
     )
 
     iran_us_hits = sum(
-        1 for key in IRAN_US
+        1
+        for key in IRAN_US
         if norm(key) in text
     )
 
-    return political_hits >= 1 or iran_us_hits >= 1
+    return (
+        political_hits >= 1
+        or iran_us_hits >= 1
+    )
 
 
 def fetch_news():
-    result = []
-    rss_sources = [s for s in SOURCES if s.get("feed")]
 
-    print(f"📚 إجمالي المصادر التي سيحاول النظام قراءتها: {len(rss_sources)}")
+    result = []
+
+    rss_sources = [
+        s for s in SOURCES
+        if s.get("feed")
+    ]
+
+    print(
+        f"📚 إجمالي المصادر التي سيحاول النظام قراءتها: "
+        f"{len(rss_sources)}"
+    )
 
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(hours=MAX_AGE_HOURS)
+
+    cutoff = (
+        now -
+        timedelta(hours=MAX_AGE_HOURS)
+    )
 
     for source in rss_sources:
-        try:
-            feed = feedparser.parse(source["feed"])
 
-            if getattr(feed, "bozo", False):
-                print(f"⚠️ RSS غير مستقر: {source['name']}")
+        try:
+
+            feed = feedparser.parse(
+                source["feed"]
+            )
+
+            if getattr(
+                feed,
+                "bozo",
+                False
+            ):
+                print(
+                    f"⚠️ RSS غير مستقر: "
+                    f"{source['name']}"
+                )
 
             count = 0
 
-            for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
-                title = (entry.get("title") or "").strip()
+            for entry in feed.entries[
+                :MAX_NEWS_PER_SOURCE
+            ]:
+
+                title = (
+                    entry.get("title") or ""
+                ).strip()
 
                 if not title:
                     continue
 
-                published_at = published_time(entry)
+                published_at = published_time(
+                    entry
+                )
 
-                # إذا كان RSS يعطي تاريخاً قديماً، نتجاهله.
-                if published_at and published_at < cutoff:
+                if (
+                    published_at
+                    and published_at < cutoff
+                ):
                     continue
 
                 article = {
                     "source": source["name"],
                     "family": family(source),
-                    "country": source.get("country", ""),
-                    "type": source.get("type", "news"),
-                    "website": source.get("website", ""),
+                    "country": source.get(
+                        "country",
+                        ""
+                    ),
+                    "type": source.get(
+                        "type",
+                        "news"
+                    ),
+                    "website": source.get(
+                        "website",
+                        ""
+                    ),
                     "title": title,
-                    "summary": (entry.get("summary") or "").strip(),
-                    "link": (entry.get("link") or "").strip(),
-                    "published_at": published_at,
+                    "summary": (
+                        entry.get(
+                            "summary"
+                        ) or ""
+                    ).strip(),
+                    "link": (
+                        entry.get(
+                            "link"
+                        ) or ""
+                    ).strip(),
+                    "published_at":
+                        published_at
                 }
 
-                if not is_political(article):
+                if not is_political(
+                    article
+                ):
                     continue
 
-                article["_id"] = article_id(article)
+                article["_id"] = article_id(
+                    article
+                )
+
                 result.append(article)
+
                 count += 1
 
-            print(f"🔎 {source['name']}: {count} خبر سياسي حديث")
+            print(
+                f"🔎 {source['name']}: "
+                f"{count} خبر سياسي حديث"
+            )
 
         except Exception as exc:
-            print(f"❌ {source.get('name', 'مصدر')}: {exc}")
+
+            print(
+                f"❌ {source.get('name', 'مصدر')}: "
+                f"{exc}"
+            )
 
     return result
 
 
 def same_event(a, b):
-    """
-    لا نعتبر مصدرين من المؤسسة نفسها مصدرين مستقلين.
-    ولا ندمج موضوعين مختلفين لمجرد تشابه الكلمات.
-    """
+
     if a["family"] == b["family"]:
         return False
 
-    title_score = similarity(a["title"], b["title"])
-    full_score = similarity(event_text(a), event_text(b))
+    title_score = similarity(
+        a["title"],
+        b["title"]
+    )
 
-    common = words(event_text(a)) & words(event_text(b))
+    full_score = similarity(
+        event_text(a),
+        event_text(b)
+    )
 
-    # تشابه قوي جداً.
-    if title_score >= 0.84 or full_score >= 0.84:
+    common = (
+        words(event_text(a))
+        &
+        words(event_text(b))
+    )
+
+    if (
+        title_score >= 0.84
+        or
+        full_score >= 0.84
+    ):
         return True
 
-    # تشابه متوسط مع 3 كلمات حدثية مشتركة على الأقل.
     event_words = {
-        "ايران", "ايراني", "امريكا", "امريكي", "واشنطن", "طهران",
-        "ترامب", "اسرائيل", "اليمن", "الحوثيين", "غزه", "لبنان",
-        "العراق", "السعوديه", "هجوم", "ضربه", "قصف", "صاروخ",
-        "صواريخ", "مسييره", "مفاوضات", "هدنه", "عقوبات", "نووي",
-        "هرمز", "حرس", "ثوري", "قاعدة", "قوات", "اسرائيلي"
+        "ايران", "ايراني",
+        "امريكا", "امريكي",
+        "واشنطن", "طهران",
+        "ترامب", "اسرائيل",
+        "اليمن", "الحوثيين",
+        "غزه", "لبنان",
+        "العراق", "السعوديه",
+        "هجوم", "ضربه", "قصف",
+        "صاروخ", "صواريخ",
+        "مسييره", "مفاوضات",
+        "هدنه", "عقوبات",
+        "نووي", "هرمز",
+        "حرس", "ثوري",
+        "قاعدة", "قوات",
+        "اسرائيلي"
     }
 
-    shared_event = common & event_words
+    shared_event = (
+        common &
+        event_words
+    )
 
-    if full_score >= 0.70 and len(shared_event) >= 3:
+    if (
+        full_score >= 0.70
+        and
+        len(shared_event) >= 3
+    ):
         return True
 
-    # تشابه عنوان متوسط مع كيانين مشتركين على الأقل.
-    if title_score >= 0.72 and len(common) >= 3:
+    if (
+        title_score >= 0.72
+        and
+        len(common) >= 3
+    ):
         return True
 
     return False
 
 
 def group_news(news):
-    """
-    تجميع الأخبار التي تتحدث عن الحدث نفسه فقط.
-    """
-    ordered = sorted(news, key=priority, reverse=True)
+
+    ordered = sorted(
+        news,
+        key=priority,
+        reverse=True
+    )
 
     groups = []
     used = set()
 
-    for i, article in enumerate(ordered):
+    for i, article in enumerate(
+        ordered
+    ):
+
         if i in used:
             continue
 
         group = [article]
+
         used.add(i)
 
-        for j in range(i + 1, len(ordered)):
+        for j in range(
+            i + 1,
+            len(ordered)
+        ):
+
             if j in used:
                 continue
 
             other = ordered[j]
 
-            if same_event(article, other):
+            if same_event(
+                article,
+                other
+            ):
+
                 group.append(other)
                 used.add(j)
 
@@ -483,125 +656,234 @@ def group_news(news):
 
 
 def group_priority(group):
-    return max(priority(article) for article in group)
+
+    return max(
+        priority(article)
+        for article in group
+    )
 
 
 def group_countries(group):
-    return {a.get("country", "") for a in group if a.get("country")}
+
+    return {
+        a.get("country", "")
+        for a in group
+        if a.get("country")
+    }
 
 
 def diversify_groups(groups):
-    """
-    لا نخلي أول 5 أخبار كلها من نفس البلد/المؤسسة.
-    نفضل التنوع مع إبقاء الأولوية للخبر الأهم.
-    """
-    remaining = list(groups)
-    selected = []
-    used_families = set()
-    country_counts = {"Iraq": 0, "Arab": 0, "World": 0}
 
-    while remaining and len(selected) < MAX_POSTS_PER_RUN:
+    remaining = list(groups)
+
+    selected = []
+
+    used_families = set()
+
+    country_counts = {
+        "Iraq": 0,
+        "Arab": 0,
+        "World": 0
+    }
+
+    while (
+        remaining
+        and
+        len(selected) < MAX_POSTS_PER_RUN
+    ):
+
         best_index = None
         best_score = None
 
-        for idx, group in enumerate(remaining):
-            families = {a["family"] for a in group}
+        for idx, group in enumerate(
+            remaining
+        ):
 
-            # المجموعة الواحدة يجب أن تحتوي على مؤسستين مستقلتين على الأقل.
+            families = {
+                a["family"]
+                for a in group
+            }
+
             if len(families) < 2:
                 continue
 
-            # لا نكرر نفس المؤسسة/العائلة في منشورين خلال التشغيل نفسه.
             if families & used_families:
                 continue
 
-            countries = group_countries(group)
+            countries = group_countries(
+                group
+            )
 
-            score = float(group_priority(group))
+            score = float(
+                group_priority(group)
+            )
 
-            # تنويع العراق/العربي/العالمي.
             for country in countries:
+
                 if country in country_counts:
-                    if country_counts[country] == 0:
+
+                    if country_counts[
+                        country
+                    ] == 0:
+
                         score += 7
-                    elif country_counts[country] >= 2:
+
+                    elif country_counts[
+                        country
+                    ] >= 2:
+
                         score -= 8
 
-            # إذا كان الخبر إيران/أمريكا، تبقى له الأولوية القصوى.
-            joined = norm(" ".join(a["title"] for a in group))
-            if any(norm(k) in joined for k in IRAN_US):
+            joined = norm(
+                " ".join(
+                    a["title"]
+                    for a in group
+                )
+            )
+
+            if any(
+                norm(k) in joined
+                for k in IRAN_US
+            ):
                 score += 12
 
-            if best_score is None or score > best_score:
+            if (
+                best_score is None
+                or
+                score > best_score
+            ):
+
                 best_score = score
                 best_index = idx
 
         if best_index is None:
             break
 
-        group = remaining.pop(best_index)
+        group = remaining.pop(
+            best_index
+        )
+
         selected.append(group)
 
         for article in group:
-            used_families.add(article["family"])
+            used_families.add(
+                article["family"]
+            )
 
-        for country in group_countries(group):
+        for country in group_countries(
+            group
+        ):
+
             if country in country_counts:
-                country_counts[country] += 1
+                country_counts[
+                    country
+                ] += 1
 
     return selected
 
 
 def openai_text(data):
+
     if data.get("output_text"):
-        return data["output_text"].strip()
+        return data[
+            "output_text"
+        ].strip()
 
     output = []
 
-    for item in data.get("output", []):
-        if item.get("type") != "message":
+    for item in data.get(
+        "output",
+        []
+    ):
+
+        if item.get(
+            "type"
+        ) != "message":
             continue
 
-        for content in item.get("content", []):
-            if content.get("type") == "output_text":
-                text = content.get("text")
+        for content in item.get(
+            "content",
+            []
+        ):
+
+            if content.get(
+                "type"
+            ) == "output_text":
+
+                text = content.get(
+                    "text"
+                )
+
                 if text:
                     output.append(text)
 
-    return "\n".join(output).strip() if output else None
+    return (
+        "\n".join(output).strip()
+        if output
+        else None
+    )
 
 
-def openai_call(prompt, max_tokens=300):
+def openai_call(
+    prompt,
+    max_tokens=300
+):
+
     try:
+
         response = session.post(
             "https://api.openai.com/v1/responses",
+
             headers={
-                "Authorization": f"Bearer {OPENAI_KEY}",
-                "Content-Type": "application/json"
+                "Authorization":
+                    f"Bearer {OPENAI_KEY}",
+                "Content-Type":
+                    "application/json"
             },
+
             json={
                 "model": "gpt-5.6-luna",
                 "input": prompt,
-                "max_output_tokens": max_tokens
+                "max_output_tokens":
+                    max_tokens
             },
+
             timeout=60
         )
 
-        print("🤖 OpenAI Status:", response.status_code)
+        print(
+            "🤖 OpenAI Status:",
+            response.status_code
+        )
 
         if response.status_code != 200:
-            print(response.text)
+
+            print(
+                response.text
+            )
+
             return None
 
-        return openai_text(response.json())
+        return openai_text(
+            response.json()
+        )
 
     except Exception as exc:
-        print("❌ OpenAI:", exc)
+
+        print(
+            "❌ OpenAI:",
+            exc
+        )
+
         return None
 
 
 def verify_event(group):
-    families = {a["family"] for a in group}
+
+    families = {
+        a["family"]
+        for a in group
+    }
 
     if len(families) < 2:
         return False
@@ -619,29 +901,57 @@ def verify_event(group):
 
 تحقق بدقة هل المصادر التالية تؤكد "الواقعة نفسها" أم أنها تتحدث عن وقائع مختلفة داخل الموضوع نفسه.
 
-{ text }
+{text}
 
 القواعد الصارمة:
 - لا تدمج خبرين مختلفين لمجرد أنهما عن إيران أو أمريكا أو العراق أو اليمن أو السعودية.
-- يجب أن تكون الواقعة الأساسية نفسها: نفس الحدث/الضربة/القرار/التصريح/الاعتقال/المفاوضات ونحو ذلك.
+- يجب أن تكون الواقعة الأساسية نفسها: نفس الحدث أو الضربة أو القرار أو التصريح أو الاعتقال أو المفاوضات ونحو ذلك.
 - إذا كان هناك اختلاف جوهري في الحدث، أجب NO.
 - إذا كانت المصادر تؤكد الواقعة نفسها فعلاً، أجب YES.
 - لا تعتبر تكرار المؤسسة نفسها مصدراً مستقلاً.
 - أجب فقط YES أو NO.
 """.strip()
 
-    answer = openai_call(prompt, max_tokens=10)
+    # مهم: الحد الأدنى الحالي للـ API هو 16.
+    answer = openai_call(
+        prompt,
+        max_tokens=16
+    )
 
-    print("🔍 تحقق الحدث:", answer)
+    print(
+        "🔍 تحقق الحدث:",
+        answer
+    )
 
-    return bool(answer and answer.strip().upper() == "YES")
+    if not answer:
+        return False
+
+    return (
+        answer.strip()
+        .upper()
+        == "YES"
+    )
 
 
 def clean_final(text):
-    text = (text or "").strip()
 
-    text = re.sub(r"^```.*?\n", "", text, flags=re.S)
-    text = re.sub(r"\n```$", "", text, flags=re.S)
+    text = (
+        text or ""
+    ).strip()
+
+    text = re.sub(
+        r"^```.*?\n",
+        "",
+        text,
+        flags=re.S
+    )
+
+    text = re.sub(
+        r"\n```$",
+        "",
+        text,
+        flags=re.S
+    )
 
     text = re.sub(
         r"^🔴\s*المصدر\s*:\s*",
@@ -650,19 +960,29 @@ def clean_final(text):
         flags=re.I
     )
 
-    # إذا أعاد النموذج أكثر من سطر، نأخذ النص كله لكن بدون مقدمات.
-    text = text.replace("\n\n", "\n").strip()
+    text = text.replace(
+        "\n\n",
+        "\n"
+    ).strip()
 
     return text
 
 
 def analyze(group):
+
     if not verify_event(group):
         return None
 
-    # ترتيب المصادر حسب ظهورها، ومنع تكرار الاسم.
-    source_names = list(dict.fromkeys(a["source"] for a in group))
-    source_text = "، ".join(source_names)
+    source_names = list(
+        dict.fromkeys(
+            a["source"]
+            for a in group
+        )
+    )
+
+    source_text = "، ".join(
+        source_names
+    )
 
     news_text = "\n\n".join(
         f"المصدر: {a['source']}\n"
@@ -695,22 +1015,29 @@ def analyze(group):
 - بعد 🔴 اكتب أسماء المؤسسات التي تؤكد نفس الواقعة مباشرة.
 - إذا تعددت المؤسسات، افصل بينها بالفاصلة العربية "،" وليس "و".
 - لا تضف مقدمة أو تعليقاً أو تفسيراً.
-- الصيغة الوحيدة:
+
+الصيغة الوحيدة:
 🔴 اسم المصدر، اسم المصدر: نص الخبر
-- إذا لم يكن الخبر مهماً: SKIP
+
+إذا لم يكن الخبر مهماً:
+SKIP
 """.strip()
 
-    result = openai_call(prompt, max_tokens=300)
+    result = openai_call(
+        prompt,
+        max_tokens=300
+    )
 
     if not result:
         return None
 
-    result = clean_final(result)
+    result = clean_final(
+        result
+    )
 
     if result.upper() == "SKIP":
         return None
 
-    # حماية إضافية من خروج النموذج عن الصيغة.
     if not result.startswith("🔴"):
         result = "🔴 " + result
 
@@ -718,123 +1045,244 @@ def analyze(group):
 
 
 def send(message):
+
     try:
+
         response = session.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+
             data={
                 "chat_id": CHANNEL,
                 "text": message,
-                "disable_web_page_preview": True
+                "disable_web_page_preview":
+                    True
             },
+
             timeout=30
         )
 
-        print("📨 Telegram Status:", response.status_code)
+        print(
+            "📨 Telegram Status:",
+            response.status_code
+        )
 
         if response.status_code != 200:
-            print(response.text)
 
-        return response.status_code == 200
+            print(
+                response.text
+            )
+
+        return (
+            response.status_code
+            == 200
+        )
 
     except Exception as exc:
-        print("❌ Telegram:", exc)
+
+        print(
+            "❌ Telegram:",
+            exc
+        )
+
         return False
 
 
 def main():
+
     print("=" * 70)
-    print("📰 نظام الأخبار السياسية العاجلة - الإصدار الجديد")
-    print("⚡ أولوية قصوى: إيران 🇮🇷 ↔ أمريكا 🇺🇸")
-    print("🌍 العراق + العالم العربي + العالم")
-    print(f"📢 الحد الأقصى للنشر في التشغيل: {MAX_POSTS_PER_RUN}")
-    print(f"⏱️ الأخبار الحديثة ضمن آخر: {MAX_AGE_HOURS} ساعة")
+
+    print(
+        "📰 نظام الأخبار السياسية العاجلة - الإصدار الجديد"
+    )
+
+    print(
+        "⚡ أولوية قصوى: إيران 🇮🇷 ↔ أمريكا 🇺🇸"
+    )
+
+    print(
+        "🌍 العراق + العالم العربي + العالم"
+    )
+
+    print(
+        f"📢 الحد الأقصى للنشر في التشغيل: "
+        f"{MAX_POSTS_PER_RUN}"
+    )
+
+    print(
+        f"⏱️ الأخبار الحديثة ضمن آخر: "
+        f"{MAX_AGE_HOURS} ساعة"
+    )
+
     print("=" * 70)
 
     seen = load_seen()
 
     all_news = fetch_news()
-    print(f"\n📰 مجموع الأخبار السياسية الحديثة المقروءة: {len(all_news)}")
 
-    # أول فلتر: لا نعيد الخبر المنشور سابقاً.
+    print(
+        f"\n📰 مجموع الأخبار السياسية الحديثة المقروءة: "
+        f"{len(all_news)}"
+    )
+
     fresh = [
-        article for article in all_news
-        if not already_seen(article, seen)
+        article
+        for article in all_news
+        if not already_seen(
+            article,
+            seen
+        )
     ]
 
-    print(f"🆕 بعد منع التكرار: {len(fresh)}")
+    print(
+        f"🆕 بعد منع التكرار: "
+        f"{len(fresh)}"
+    )
 
     if not fresh:
-        print("ℹ️ لا توجد أخبار جديدة قابلة للنشر.")
+
+        print(
+            "ℹ️ لا توجد أخبار جديدة قابلة للنشر."
+        )
+
         save_seen(seen)
+
         return
 
-    # نجمع الأخبار التي تتحدث عن الواقعة نفسها.
-    groups = group_news(fresh)
+    groups = group_news(
+        fresh
+    )
 
-    print(f"🧩 عدد مجموعات الأحداث: {len(groups)}")
+    print(
+        f"🧩 عدد مجموعات الأحداث: "
+        f"{len(groups)}"
+    )
 
-    # نختار أهم الأخبار مع تنويع المصادر/المناطق.
-    groups = diversify_groups(groups)
+    groups = diversify_groups(
+        groups
+    )
 
-    print(f"🎯 المجموعات المختارة للنشر/التحقق: {len(groups)}")
+    print(
+        f"🎯 المجموعات المختارة للنشر/التحقق: "
+        f"{len(groups)}"
+    )
 
     published = 0
+
     published_fingerprints = []
 
-    for index, group in enumerate(groups, start=1):
+    for index, group in enumerate(
+        groups,
+        start=1
+    ):
+
         if published >= MAX_POSTS_PER_RUN:
             break
 
         print("\n" + "=" * 70)
-        print(f"🔎 المجموعة {index}")
+
+        print(
+            f"🔎 المجموعة {index}"
+        )
 
         for article in group:
+
             print(
                 f"• [{article['country']}] "
-                f"{article['source']} | {article['title']}"
+                f"{article['source']} | "
+                f"{article['title']}"
             )
 
-        result = analyze(group)
+        result = analyze(
+            group
+        )
 
         if not result:
-            print("⏭️ تم تجاهل المجموعة: غير مؤكدة أو غير مهمة.")
+
+            print(
+                "⏭️ تم تجاهل المجموعة: "
+                "غير مؤكدة أو غير مهمة."
+            )
+
             continue
 
-        # منع تكرار مجموعتين متشابهتين داخل نفس التشغيل.
-        result_body = re.sub(r"^🔴\s*", "", result).strip()
+        result_body = re.sub(
+            r"^🔴\s*",
+            "",
+            result
+        ).strip()
 
         duplicate_in_run = any(
-            similarity(result_body, old) >= 0.78
+            similarity(
+                result_body,
+                old
+            ) >= 0.78
             for old in published_fingerprints
         )
 
         if duplicate_in_run:
-            print("⛔ تكرار داخل التشغيل نفسه — لن يُنشر.")
-            continue
-
-        print("\n📢 الخبر النهائي:")
-        print(result)
-
-        if send(result):
-            published += 1
-            published_fingerprints.append(result_body)
-
-            # نحفظ التكرار فقط بعد نجاح Telegram.
-            remember_group(group, result, seen)
-            save_seen(seen)
 
             print(
-                f"✅ تم نشر الخبر {published} "
-                f"من أصل {MAX_POSTS_PER_RUN}"
+                "⛔ تكرار داخل التشغيل نفسه — لن يُنشر."
             )
-        else:
-            print("❌ فشل الإرسال — لم نضع الخبر في سجل المنشور.")
 
-    save_seen(seen)
+            continue
+
+        print(
+            "\n📢 الخبر النهائي:"
+        )
+
+        print(
+            result
+        )
+
+        if send(result):
+
+            published += 1
+
+            published_fingerprints.append(
+                result_body
+            )
+
+            remember_group(
+                group,
+                result,
+                seen
+            )
+
+            save_seen(
+                seen
+            )
+
+            print(
+                f"✅ تم نشر الخبر "
+                f"{published} "
+                f"من أصل "
+                f"{MAX_POSTS_PER_RUN}"
+            )
+
+        else:
+
+            print(
+                "❌ فشل الإرسال — "
+                "لم نضع الخبر في سجل المنشور."
+            )
+
+    save_seen(
+        seen
+    )
 
     print("\n" + "=" * 70)
-    print(f"🎉 انتهى التشغيل. عدد المنشورات الناجحة: {published}")
-    print("💾 سجل التكرار محفوظ بانتظار خطوة GitHub لحفظه في المستودع.")
+
+    print(
+        f"🎉 انتهى التشغيل. "
+        f"عدد المنشورات الناجحة: "
+        f"{published}"
+    )
+
+    print(
+        "💾 سجل التكرار محفوظ."
+    )
+
     print("=" * 70)
 
 
