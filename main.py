@@ -150,6 +150,39 @@ def verified_groups(groups):
 
 
 # =========================
+# استخراج نص OpenAI
+# =========================
+
+def extract_openai_text(data):
+
+    # الطريقة الأولى
+    if data.get("output_text"):
+        return data["output_text"].strip()
+
+    # الطريقة الثانية
+    texts = []
+
+    for item in data.get("output", []):
+
+        if item.get("type") != "message":
+            continue
+
+        for content in item.get("content", []):
+
+            if content.get("type") == "output_text":
+
+                text = content.get("text", "")
+
+                if text:
+                    texts.append(text)
+
+    if texts:
+        return "\n".join(texts).strip()
+
+    return None
+
+
+# =========================
 # تحليل الذكاء الاصطناعي
 # =========================
 
@@ -240,15 +273,26 @@ def analyze_news(verified):
 
     data = response.json()
 
-    output_text = data.get("output_text")
+    # استخراج النص بالطريقة الصحيحة
+    output_text = extract_openai_text(data)
 
     if not output_text:
 
-        print("❌ لم يتم الحصول على نص من OpenAI")
+        print("❌ لم يتم العثور على النص داخل رد OpenAI")
+
+        print(
+            json.dumps(
+                data,
+                ensure_ascii=False,
+                indent=2
+            )
+        )
 
         return None
 
-    return output_text.strip()
+    print("✅ تم استخراج رد OpenAI بنجاح")
+
+    return output_text
 
 
 # =========================
@@ -279,9 +323,11 @@ def send_to_telegram(message):
     if response.status_code == 200:
 
         print("✅ تم إرسال الخبر إلى تيليغرام بنجاح")
+
         return True
 
     print("❌ فشل إرسال الخبر إلى تيليغرام")
+
     return False
 
 
@@ -298,14 +344,21 @@ news = get_news()
 print(f"\n📊 مجموع الأخبار: {len(news)}")
 
 if not news:
+
     print("❌ لم يتم العثور على أخبار")
     raise SystemExit
 
 
+# تجميع الأخبار
+
 groups = group_news(news)
 
-print(f"🔗 مجموع مجموعات الأخبار: {len(groups)}")
+print(
+    f"🔗 مجموع مجموعات الأخبار: {len(groups)}"
+)
 
+
+# التحقق
 
 verified = verified_groups(groups)
 
@@ -313,12 +366,16 @@ print(
     f"✅ الأخبار التي لديها مصدران أو أكثر: {len(verified)}"
 )
 
+
 if not verified:
 
     print("⚠️ لا توجد أخبار مؤكدة من أكثر من مصدر.")
     print("⚠️ لن يتم النشر.")
+
     raise SystemExit
 
+
+# تحليل OpenAI
 
 result = analyze_news(verified)
 
@@ -326,18 +383,19 @@ result = analyze_news(verified)
 if not result:
 
     print("❌ لم ينتج الذكاء الاصطناعي أي خبر.")
+
     raise SystemExit
 
 
 print("\n====================================")
-print("🤖 الخبر/الأخبار المختارة")
+print("🤖 الأخبار المختارة")
 print("====================================")
 
 print(result)
 
 
 # =========================
-# اختبار النشر
+# النشر في تيليغرام
 # =========================
 
 print("\n====================================")
