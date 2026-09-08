@@ -1,691 +1,842 @@
 import os
 import re
+import json
+import hashlib
+from datetime import datetime, timezone, timedelta
+from difflib import SequenceMatcher
+from urllib.parse import urlparse
+
 import requests
 import feedparser
-
-from difflib import SequenceMatcher
 
 from sources import SOURCES
 
 
-# =========================================================
-# الإعدادات
-# =========================================================
-
 OPENAI_KEY = os.environ["OPENAI_API_KEY"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-
 CHANNEL = "@MH999R"
 
-# أقصى عدد أخبار يتم جلبها من كل مصدر
-MAX_NEWS_PER_SOURCE = 10
-
-# أقصى عدد أخبار يتم نشرها في كل تشغيل
+# النظام يعمل كل 5 دقائق، لكن GitHub قد يؤخر التشغيل قليلاً.
+MAX_NEWS_PER_SOURCE = 8
 MAX_POSTS_PER_RUN = 5
 
+# نقرأ الأخبار الحديثة فقط حتى لا تعود أخبار قديمة من RSS.
+MAX_AGE_HOURS = 12
 
-# =========================================================
-# جلب الأخبار من المصادر
-# =========================================================
+# سجل دائم للأخبار المنشورة.
+SEEN_FILE = "seen_news.json"
+MAX_SEEN_EVENTS = 2500
 
-def fetch_news():
+# أولوية قصوى لإيران/أمريكا، ثم الأخبار السياسية العاجلة والمهمة.
+IRAN_US = [
+    "إيران", "الإيراني", "الإيرانية", "طهران",
+    "أمريكا", "الولايات المتحدة", "واشنطن", "ترامب",
+    "الحرس الثوري", "البنتاغون", "البيت الأبيض",
+    "مضيق هرمز", "هرمز", "صاروخ", "صواريخ",
+    "مسيرة", "مسيّرة", "ضربة", "هجوم", "قصف",
+    "غارات", "مفاوضات", "هدنة", "عقوبات", "نووي",
+    "منشأة نووية", "قاعدة أمريكية", "القواعد الأمريكية",
+    "القوات الأمريكية", "إسرائيل"
+]
 
-    all_news = []
+POLITICAL = [
+    "حكومة", "رئيس", "رئاسة", "برلمان", "انتخابات", "وزير",
+    "وزارة", "حزب", "كتلة", "سياسي", "مفاوضات", "اتفاق",
+    "عقوبات", "أزمة", "حرب", "هجوم", "ضربة", "قصف",
+    "صاروخ", "مسيّرة", "هدنة", "دبلوماسي", "أمم المتحدة",
+    "مجلس الأمن", "واشنطن", "إيران", "العراق", "السعودية",
+    "اليمن", "سوريا", "لبنان", "غزة", "فلسطين", "روسيا",
+    "أوكرانيا", "الصين"
+]
 
-    rss_sources = [
-        source for source in SOURCES
-        if source.get("feed")
-    ]
+BREAKING = [
+    "عاجل", "الآن", "هجوم", "ضربة", "قصف", "استهداف",
+    "مقتل", "اغتيال", "انفجار", "صاروخ", "صواريخ",
+    "مسيرة", "مسيّرة", "إطلاق نار", "اشتباك", "اعتراض",
+    "سقوط", "تطور", "تصعيد", "طوارئ"
+]
 
-    print(f"\n📚 عدد مصادر RSS الفعالة: {len(rss_sources)}")
+ARABIC_STOP = {
+    "من", "في", "على", "الى", "إلى", "عن", "مع", "هذا", "هذه",
+    "ذلك", "تلك", "بعد", "قبل", "خلال", "بشأن", "حول", "ان",
+    "إن", "تم", "قد", "وقال", "وقالت", "واكد", "وأكد", "مصادر",
+    "مصدر", "اليوم", "غدا", "غداً", "الان", "الآن", "التي",
+    "الذي", "الذين", "كما", "بين", "لدى", "لـ", "فيما", "أنه",
+    "إنه", "كانت", "كان", "يكون", "يتم", "وسط", "نحو", "أمام",
+    "ضمن", "عبر", "وفق", "بسبب", "أثناء", "أمس", "غدًا"
+}
 
-    for source_info in rss_sources:
+# كلمات عامة جداً لا تساعد في معرفة هل الخبر نفسه أم لا.
+GENERIC_WORDS = {
+    "خبر", "أخبار", "آخر", "اخر", "الجديد", "الجديدة", "تفاصيل",
+    "تطورات", "تصريحات", "يعلن", "تعلن", "اعلن", "أعلن", "قال",
+    "تقول", "بحسب", "مصدر", "مصادر", "صحيفة", "وكالة", "اليوم"
+}
 
-        source_name = source_info["name"]
-        url = source_info["feed"]
-
-        print(f"\n🔎 جلب أخبار من: {source_name}")
-
-        try:
-
-            feed = feedparser.parse(url)
-
-            count = 0
-
-            for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
-
-                title = entry.get("title", "").strip()
-                summary = entry.get("summary", "").strip()
-
-                if not title:
-                    continue
-
-                all_news.append({
-                    "source": source_name,
-                    "title": title,
-                    "summary": summary,
-                })
-
-                count += 1
-
-            print(f"   ✅ تم جلب {count} خبر")
-
-        except Exception as e:
-
-            print(f"   ❌ خطأ في المصدر: {e}")
-
-    print(f"\n📊 مجموع الأخبار: {len(all_news)}")
-
-    return all_news
+session = requests.Session()
+session.headers.update({
+    "User-Agent": "Mozilla/5.0 (compatible; AI-News-Bot/1.0)"
+})
 
 
-# =========================================================
-# تنظيف النص
-# =========================================================
+def norm(text):
+    text = (text or "").lower()
+    text = re.sub(r"https?://\S+", " ", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
 
-def normalize_text(text):
-
-    text = text.lower()
-
-    text = re.sub(
-        r"https?://\S+",
-        "",
-        text
+    # توحيد أشكال الحروف العربية.
+    text = (
+        text.replace("أ", "ا")
+            .replace("إ", "ا")
+            .replace("آ", "ا")
+            .replace("ٱ", "ا")
+            .replace("ة", "ه")
+            .replace("ى", "ي")
     )
 
-    text = re.sub(
-        r"[^a-zA-Z0-9\u0600-\u06FF\s]",
-        " ",
-        text
-    )
-
-    text = re.sub(
-        r"\s+",
-        " ",
-        text
-    )
-
-    return text.strip()
+    text = re.sub(r"[^a-zA-Z0-9\u0600-\u06FF\s]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
-# =========================================================
-# مقارنة الأخبار
-# =========================================================
+def words(text):
+    result = set()
+    for word in norm(text).split():
+        if len(word) <= 2:
+            continue
+        if word in ARABIC_STOP or word in GENERIC_WORDS:
+            continue
+        result.add(word)
+    return result
+
 
 def similarity(a, b):
+    a_norm = norm(a)
+    b_norm = norm(b)
 
-    a = normalize_text(a)
-    b = normalize_text(b)
+    if not a_norm or not b_norm:
+        return 0.0
 
-    return SequenceMatcher(
-        None,
-        a,
-        b
-    ).ratio()
+    seq = SequenceMatcher(None, a_norm, b_norm).ratio()
+
+    aw = words(a_norm)
+    bw = words(b_norm)
+
+    if not aw or not bw:
+        overlap = 0.0
+    else:
+        overlap = len(aw & bw) / len(aw | bw)
+
+    return (seq * 0.45) + (overlap * 0.55)
 
 
-# =========================================================
-# تجميع الأخبار المتشابهة
-# =========================================================
+def source_domain(source):
+    website = (source.get("website") or "").strip()
+    if not website:
+        return ""
 
-def group_news(news):
+    try:
+        host = urlparse(website).netloc.lower()
+    except Exception:
+        host = website.lower()
 
-    groups = []
+    host = host.removeprefix("www.")
+    return host
 
-    used = set()
 
-    for i, article in enumerate(news):
+def family(source):
+    """
+    يجعل النسخ التابعة للمؤسسة نفسها عائلة واحدة.
+    مثلاً: الحرة والحرة العراق لا تُحسبان مؤسستين مستقلتين.
+    """
+    domain = source_domain(source)
 
-        if i in used:
-            continue
+    aliases = {
+        "alhurra.com": "alhurra",
+        "alhurra-iraq.com": "alhurra",
+        "alarabiya.net": "alarabiya",
+        "alhadath.net": "alarabiya",
+        "aljazeera.net": "aljazeera",
+        "reuters.com": "reuters",
+        "bbc.com": "bbc",
+        "bbc.co.uk": "bbc",
+        "skynewsarabia.com": "skynewsarabia",
+    }
 
-        group = [article]
+    if domain in aliases:
+        return aliases[domain]
 
-        used.add(i)
+    # معالجة نطاقات فرعية.
+    for key, value in aliases.items():
+        if domain.endswith("." + key):
+            return value
 
-        for j in range(
-            i + 1,
-            len(news)
-        ):
+    return domain or norm(source.get("name", ""))
 
-            if j in used:
-                continue
 
-            other = news[j]
+def article_id(article):
+    raw = "|".join([
+        article.get("family", ""),
+        article.get("title", ""),
+        article.get("link", "")
+    ])
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-            score = similarity(
-                article["title"],
-                other["title"]
+
+def event_text(article):
+    return (article.get("title", "") + " " + article.get("summary", "")).strip()
+
+
+def event_hash(text):
+    normalized = " ".join(sorted(words(text)))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def load_seen():
+    """
+    متوافق مع السجل القديم إذا كان عبارة عن قائمة hashes،
+    ومع السجل الجديد إذا كان JSON يحتوي events.
+    """
+    try:
+        with open(SEEN_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return {"ids": set(), "events": []}
+
+    if isinstance(data, list):
+        return {"ids": set(data), "events": []}
+
+    if not isinstance(data, dict):
+        return {"ids": set(), "events": []}
+
+    ids = set(data.get("ids", []))
+    events = data.get("events", [])
+
+    if not isinstance(events, list):
+        events = []
+
+    clean_events = []
+    for item in events:
+        if isinstance(item, dict) and item.get("title"):
+            clean_events.append(item)
+
+    return {"ids": ids, "events": clean_events}
+
+
+def save_seen(seen):
+    data = {
+        "version": 2,
+        "ids": list(seen["ids"])[-5000:],
+        "events": seen["events"][-MAX_SEEN_EVENTS:]
+    }
+
+    with open(SEEN_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def already_seen(article, seen):
+    """
+    يمنع التكرار حتى لو تغيّر عنوان الخبر أو جاء من مصدر آخر.
+    """
+    aid = article_id(article)
+
+    if aid in seen["ids"]:
+        return True
+
+    candidate = event_text(article)
+
+    for old in seen["events"]:
+        old_title = old.get("title", "")
+        old_text = old.get("text", old_title)
+
+        # تشابه قوي جداً = نفس الخبر غالباً.
+        score_title = similarity(article.get("title", ""), old_title)
+        score_full = similarity(candidate, old_text)
+
+        if score_title >= 0.84:
+            return True
+
+        if score_full >= 0.82:
+            return True
+
+        # إذا اتفق العنوانان على كيانات/أحداث أساسية مع تشابه جيد.
+        common = words(candidate) & words(old_text)
+        if len(common) >= 4 and score_full >= 0.68:
+            return True
+
+    return False
+
+
+def remember_group(group, final_text, seen):
+    """
+    بعد نجاح النشر فقط، نحفظ كل مقالات المجموعة + بصمة الحدث النهائي.
+    """
+    for article in group:
+        seen["ids"].add(article_id(article))
+
+    clean_final = re.sub(r"^🔴\s*", "", final_text).strip()
+    seen["events"].append({
+        "hash": event_hash(clean_final),
+        "title": clean_final,
+        "text": clean_final,
+        "time": datetime.now(timezone.utc).isoformat()
+    })
+
+    # تنظيف الذاكرة.
+    seen["ids"] = set(list(seen["ids"])[-5000:])
+    seen["events"] = seen["events"][-MAX_SEEN_EVENTS:]
+
+
+def published_time(entry):
+    """
+    يحاول قراءة وقت الخبر من RSS.
+    """
+    parsed = (
+        entry.get("published_parsed")
+        or entry.get("updated_parsed")
+        or entry.get("created_parsed")
+    )
+
+    if parsed:
+        try:
+            import calendar
+            return datetime.fromtimestamp(
+                calendar.timegm(parsed),
+                tz=timezone.utc
             )
-
-            if score >= 0.55:
-
-                if other["source"] != article["source"]:
-
-                    group.append(other)
-
-                    used.add(j)
-
-        groups.append(group)
-
-    print(
-        f"🔗 مجموع مجموعات الأخبار: {len(groups)}"
-    )
-
-    return groups
-
-
-# =========================================================
-# التحقق من تعدد المصادر
-# =========================================================
-
-def verified_news(groups):
-
-    verified = []
-
-    for group in groups:
-
-        sources = set(
-            article["source"]
-            for article in group
-        )
-
-        if len(sources) >= 2:
-
-            verified.append(group)
-
-    print(
-        f"✅ الأخبار التي لديها مصدران أو أكثر: "
-        f"{len(verified)}"
-    )
-
-    return verified
-
-
-# =========================================================
-# استخراج نص OpenAI
-# =========================================================
-
-def extract_openai_text(data):
-
-    if data.get("output_text"):
-
-        return data["output_text"].strip()
-
-    texts = []
-
-    for item in data.get(
-        "output",
-        []
-    ):
-
-        if item.get("type") != "message":
-            continue
-
-        for content in item.get(
-            "content",
-            []
-        ):
-
-            if content.get(
-                "type"
-            ) == "output_text":
-
-                text = content.get(
-                    "text",
-                    ""
-                )
-
-                if text:
-                    texts.append(text)
-
-    if texts:
-
-        return "\n".join(
-            texts
-        ).strip()
+        except Exception:
+            pass
 
     return None
 
 
-# =========================================================
-# تحليل الخبر بواسطة OpenAI
-# =========================================================
+def priority(article):
+    text = norm(event_text(article))
+    score = 0
 
-def analyze_news(group):
+    # أولوية إيران/أمريكا.
+    for key in IRAN_US:
+        if norm(key) in text:
+            score += 8
 
-    sources = list(
-        dict.fromkeys(
-            article["source"]
-            for article in group
+    # سياسة.
+    for key in POLITICAL:
+        if norm(key) in text:
+            score += 2
+
+    # عاجل/تصعيد.
+    for key in BREAKING:
+        if norm(key) in text:
+            score += 5
+
+    # مكافأة بسيطة للخبر الأحدث إذا كان الوقت معروفاً.
+    if article.get("published_at"):
+        age_minutes = max(
+            0,
+            (datetime.now(timezone.utc) - article["published_at"]).total_seconds() / 60
         )
+        score += max(0, 20 - int(age_minutes / 10))
+
+    return score
+
+
+def is_political(article):
+    text = norm(event_text(article))
+
+    political_hits = sum(
+        1 for key in POLITICAL
+        if norm(key) in text
     )
 
-    # استخدام الفاصلة العربية بين المصادر
-    source_text = "، ".join(
-        sources
+    iran_us_hits = sum(
+        1 for key in IRAN_US
+        if norm(key) in text
     )
 
-    news_text = ""
+    return political_hits >= 1 or iran_us_hits >= 1
 
-    for article in group:
 
-        news_text += (
-            f"\nاسم المصدر: {article['source']}\n"
-            f"العنوان: {article['title']}\n"
-            f"التفاصيل: {article['summary']}\n"
-        )
+def fetch_news():
+    result = []
+    rss_sources = [s for s in SOURCES if s.get("feed")]
 
-    prompt = f"""
-أنت محرر أخبار سياسية محترف.
+    print(f"📚 إجمالي المصادر التي سيحاول النظام قراءتها: {len(rss_sources)}")
 
-مهمتك اختيار الخبر السياسي المهم فقط من المعلومات التالية.
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=MAX_AGE_HOURS)
 
-المصادر التي أكدت الخبر:
-{source_text}
+    for source in rss_sources:
+        try:
+            feed = feedparser.parse(source["feed"])
 
-الأخبار:
-{news_text}
+            if getattr(feed, "bozo", False):
+                print(f"⚠️ RSS غير مستقر: {source['name']}")
 
-الشروط الإلزامية:
+            count = 0
 
-1. انشر الخبر فقط إذا كان سياسياً ومهماً وله تأثير واضح.
+            for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
+                title = (entry.get("title") or "").strip()
 
-2. الأخبار المقبولة تشمل:
-- السياسة العراقية.
-- الحكومة العراقية.
-- البرلمان.
-- الانتخابات.
-- الرئاسة.
-- الوزراء والمسؤولين.
-- الأحزاب والكتل السياسية.
-- العلاقات بين الدول.
-- المفاوضات.
-- الاتفاقيات السياسية.
-- العقوبات.
-- الأزمات السياسية.
-- الحروب والتطورات السياسية المرتبطة بها.
-- القرارات الدولية المهمة.
-- التصريحات السياسية المهمة جداً.
+                if not title:
+                    continue
 
-3. لا تنشر:
-- الأخبار الفنية.
-- الرياضية.
-- الحوادث العادية.
-- الأخبار الاجتماعية.
-- أخبار المشاهير.
-- الأخبار السياسية الثانوية أو غير المؤثرة.
+                published_at = published_time(entry)
 
-4. يجب أن يكون الخبر مؤكداً من مصدرين مختلفين على الأقل.
+                # إذا كان RSS يعطي تاريخاً قديماً، نتجاهله.
+                if published_at and published_at < cutoff:
+                    continue
 
-5. لا تضف أي معلومة غير موجودة في المصادر.
+                article = {
+                    "source": source["name"],
+                    "family": family(source),
+                    "country": source.get("country", ""),
+                    "type": source.get("type", "news"),
+                    "website": source.get("website", ""),
+                    "title": title,
+                    "summary": (entry.get("summary") or "").strip(),
+                    "link": (entry.get("link") or "").strip(),
+                    "published_at": published_at,
+                }
 
-6. حافظ على الأرقام والأسماء والتواريخ المهمة.
+                if not is_political(article):
+                    continue
 
-7. اختصر الخبر بوضوح ومن دون مبالغة.
+                article["_id"] = article_id(article)
+                result.append(article)
+                count += 1
 
-8. يجب أن يبدأ الخبر دائماً بالرمز:
-🔴
+            print(f"🔎 {source['name']}: {count} خبر سياسي حديث")
 
-9. بعد 🔴 اذكر اسم المصدر أو المصادر مباشرة.
+        except Exception as exc:
+            print(f"❌ {source.get('name', 'مصدر')}: {exc}")
 
-10. إذا كانت هناك عدة مصادر، افصل بينها بالفاصلة العربية:
-،
+    return result
 
-11. ممنوع تماماً كتابة كلمة:
-المصدر
 
-12. ممنوع كتابة أي رابط.
+def same_event(a, b):
+    """
+    لا نعتبر مصدرين من المؤسسة نفسها مصدرين مستقلين.
+    ولا ندمج موضوعين مختلفين لمجرد تشابه الكلمات.
+    """
+    if a["family"] == b["family"]:
+        return False
 
-13. ممنوع إضافة هاشتاغات.
+    title_score = similarity(a["title"], b["title"])
+    full_score = similarity(event_text(a), event_text(b))
 
-14. ممنوع إضافة مقدمة أو شرح خارج الخبر.
+    common = words(event_text(a)) & words(event_text(b))
 
-15. لا تستخدم كلمة "و" للفصل بين أسماء المصادر.
+    # تشابه قوي جداً.
+    if title_score >= 0.84 or full_score >= 0.84:
+        return True
 
-16. إذا أكدت عدة مصادر الخبر، اذكر أسماء المصادر معاً.
-
-17. لا تنشر الخبر إذا كان مجرد خبر عادي أو غير مؤثر.
-
-مثال صحيح:
-
-🔴 السومرية، الجزيرة: أعلنت الحكومة قراراً جديداً بشأن...
-
-مثال خاطئ:
-
-🔴 المصدر: السومرية والجزيرة: أعلنت الحكومة قراراً جديداً بشأن...
-
-مثال خاطئ:
-
-🔴 السومرية والجزيرة: أعلنت الحكومة قراراً جديداً بشأن...
-
-إذا لم يكن الخبر السياسي مهماً، أجب فقط:
-
-SKIP
-
-إذا كان مهماً، أعد الخبر فقط.
-"""
-
-    url = "https://api.openai.com/v1/responses"
-
-    headers = {
-        "Authorization": f"Bearer {OPENAI_KEY}",
-        "Content-Type": "application/json",
+    # تشابه متوسط مع 3 كلمات حدثية مشتركة على الأقل.
+    event_words = {
+        "ايران", "ايراني", "امريكا", "امريكي", "واشنطن", "طهران",
+        "ترامب", "اسرائيل", "اليمن", "الحوثيين", "غزه", "لبنان",
+        "العراق", "السعوديه", "هجوم", "ضربه", "قصف", "صاروخ",
+        "صواريخ", "مسييره", "مفاوضات", "هدنه", "عقوبات", "نووي",
+        "هرمز", "حرس", "ثوري", "قاعدة", "قوات", "اسرائيلي"
     }
 
-    payload = {
-        "model": "gpt-5.6-luna",
-        "input": prompt,
-        "max_output_tokens": 300,
-    }
+    shared_event = common & event_words
 
+    if full_score >= 0.70 and len(shared_event) >= 3:
+        return True
+
+    # تشابه عنوان متوسط مع كيانين مشتركين على الأقل.
+    if title_score >= 0.72 and len(common) >= 3:
+        return True
+
+    return False
+
+
+def group_news(news):
+    """
+    تجميع الأخبار التي تتحدث عن الحدث نفسه فقط.
+    """
+    ordered = sorted(news, key=priority, reverse=True)
+
+    groups = []
+    used = set()
+
+    for i, article in enumerate(ordered):
+        if i in used:
+            continue
+
+        group = [article]
+        used.add(i)
+
+        for j in range(i + 1, len(ordered)):
+            if j in used:
+                continue
+
+            other = ordered[j]
+
+            if same_event(article, other):
+                group.append(other)
+                used.add(j)
+
+        groups.append(group)
+
+    return groups
+
+
+def group_priority(group):
+    return max(priority(article) for article in group)
+
+
+def group_countries(group):
+    return {a.get("country", "") for a in group if a.get("country")}
+
+
+def diversify_groups(groups):
+    """
+    لا نخلي أول 5 أخبار كلها من نفس البلد/المؤسسة.
+    نفضل التنوع مع إبقاء الأولوية للخبر الأهم.
+    """
+    remaining = list(groups)
+    selected = []
+    used_families = set()
+    country_counts = {"Iraq": 0, "Arab": 0, "World": 0}
+
+    while remaining and len(selected) < MAX_POSTS_PER_RUN:
+        best_index = None
+        best_score = None
+
+        for idx, group in enumerate(remaining):
+            families = {a["family"] for a in group}
+
+            # المجموعة الواحدة يجب أن تحتوي على مؤسستين مستقلتين على الأقل.
+            if len(families) < 2:
+                continue
+
+            # لا نكرر نفس المؤسسة/العائلة في منشورين خلال التشغيل نفسه.
+            if families & used_families:
+                continue
+
+            countries = group_countries(group)
+
+            score = float(group_priority(group))
+
+            # تنويع العراق/العربي/العالمي.
+            for country in countries:
+                if country in country_counts:
+                    if country_counts[country] == 0:
+                        score += 7
+                    elif country_counts[country] >= 2:
+                        score -= 8
+
+            # إذا كان الخبر إيران/أمريكا، تبقى له الأولوية القصوى.
+            joined = norm(" ".join(a["title"] for a in group))
+            if any(norm(k) in joined for k in IRAN_US):
+                score += 12
+
+            if best_score is None or score > best_score:
+                best_score = score
+                best_index = idx
+
+        if best_index is None:
+            break
+
+        group = remaining.pop(best_index)
+        selected.append(group)
+
+        for article in group:
+            used_families.add(article["family"])
+
+        for country in group_countries(group):
+            if country in country_counts:
+                country_counts[country] += 1
+
+    return selected
+
+
+def openai_text(data):
+    if data.get("output_text"):
+        return data["output_text"].strip()
+
+    output = []
+
+    for item in data.get("output", []):
+        if item.get("type") != "message":
+            continue
+
+        for content in item.get("content", []):
+            if content.get("type") == "output_text":
+                text = content.get("text")
+                if text:
+                    output.append(text)
+
+    return "\n".join(output).strip() if output else None
+
+
+def openai_call(prompt, max_tokens=300):
     try:
-
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=60,
+        response = session.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {OPENAI_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-5.6-luna",
+                "input": prompt,
+                "max_output_tokens": max_tokens
+            },
+            timeout=60
         )
 
-        print(
-            "\n🤖 OpenAI Status:",
-            response.status_code
-        )
+        print("🤖 OpenAI Status:", response.status_code)
 
         if response.status_code != 200:
-
-            print(
-                response.text
-            )
-
+            print(response.text)
             return None
 
-        data = response.json()
+        return openai_text(response.json())
 
-        text = extract_openai_text(
-            data
-        )
-
-        if not text:
-
-            print(
-                "❌ لم يتم الحصول على نص من OpenAI"
-            )
-
-            return None
-
-        print(
-            "✅ تم استخراج رد OpenAI بنجاح"
-        )
-
-        text = text.strip()
-
-        if text.upper() == "SKIP":
-
-            print(
-                "⏭️ الخبر غير مهم سياسياً"
-            )
-
-            return None
-
-        # =================================================
-        # حماية إضافية من كتابة "المصدر"
-        # =================================================
-
-        text = text.replace(
-            "🔴 المصدر:",
-            "🔴"
-        )
-
-        text = text.replace(
-            "🔴المصدر:",
-            "🔴"
-        )
-
-        text = text.replace(
-            "المصدر:",
-            ""
-        )
-
-        # =================================================
-        # تنظيف الفواصل بين المصادر
-        # =================================================
-
-        text = text.replace(
-            " والجزيرة:",
-            "، الجزيرة:"
-        )
-
-        text = text.replace(
-            " وBBC:",
-            "، BBC:"
-        )
-
-        return text.strip()
-
-    except Exception as e:
-
-        print(
-            f"❌ خطأ أثناء الاتصال بـ OpenAI: {e}"
-        )
-
+    except Exception as exc:
+        print("❌ OpenAI:", exc)
         return None
 
 
-# =========================================================
-# إرسال الخبر إلى Telegram
-# =========================================================
+def verify_event(group):
+    families = {a["family"] for a in group}
 
-def send_to_telegram(message):
+    if len(families) < 2:
+        return False
 
-    telegram_url = (
-        f"https://api.telegram.org/bot"
-        f"{TELEGRAM_TOKEN}/sendMessage"
+    text = "\n\n".join(
+        f"المؤسسة: {a['source']}\n"
+        f"الدولة/الفئة: {a['country']}\n"
+        f"العنوان: {a['title']}\n"
+        f"التفاصيل: {a['summary']}"
+        for a in group
     )
 
-    data = {
-        "chat_id": CHANNEL,
-        "text": message,
-    }
+    prompt = f"""
+أنت مدقق أخبار سياسية.
 
+تحقق بدقة هل المصادر التالية تؤكد "الواقعة نفسها" أم أنها تتحدث عن وقائع مختلفة داخل الموضوع نفسه.
+
+{ text }
+
+القواعد الصارمة:
+- لا تدمج خبرين مختلفين لمجرد أنهما عن إيران أو أمريكا أو العراق أو اليمن أو السعودية.
+- يجب أن تكون الواقعة الأساسية نفسها: نفس الحدث/الضربة/القرار/التصريح/الاعتقال/المفاوضات ونحو ذلك.
+- إذا كان هناك اختلاف جوهري في الحدث، أجب NO.
+- إذا كانت المصادر تؤكد الواقعة نفسها فعلاً، أجب YES.
+- لا تعتبر تكرار المؤسسة نفسها مصدراً مستقلاً.
+- أجب فقط YES أو NO.
+""".strip()
+
+    answer = openai_call(prompt, max_tokens=10)
+
+    print("🔍 تحقق الحدث:", answer)
+
+    return bool(answer and answer.strip().upper() == "YES")
+
+
+def clean_final(text):
+    text = (text or "").strip()
+
+    text = re.sub(r"^```.*?\n", "", text, flags=re.S)
+    text = re.sub(r"\n```$", "", text, flags=re.S)
+
+    text = re.sub(
+        r"^🔴\s*المصدر\s*:\s*",
+        "🔴 ",
+        text,
+        flags=re.I
+    )
+
+    # إذا أعاد النموذج أكثر من سطر، نأخذ النص كله لكن بدون مقدمات.
+    text = text.replace("\n\n", "\n").strip()
+
+    return text
+
+
+def analyze(group):
+    if not verify_event(group):
+        return None
+
+    # ترتيب المصادر حسب ظهورها، ومنع تكرار الاسم.
+    source_names = list(dict.fromkeys(a["source"] for a in group))
+    source_text = "، ".join(source_names)
+
+    news_text = "\n\n".join(
+        f"المصدر: {a['source']}\n"
+        f"العنوان: {a['title']}\n"
+        f"التفاصيل: {a['summary']}"
+        for a in group
+    )
+
+    prompt = f"""
+أنت محرر أخبار سياسية عاجلة.
+
+اكتب منشوراً واحداً فقط عن "الواقعة نفسها" التي تؤكدها المصادر أدناه.
+
+المصادر المستقلة:
+{source_text}
+
+المعلومات:
+{news_text}
+
+التعليمات الإلزامية:
+- انشر فقط إذا كان الخبر مهماً سياسياً أو عاجلاً.
+- أولوية قصوى لأي تطور حقيقي وجديد بين إيران والولايات المتحدة.
+- لا تدمج أحداثاً مختلفة في منشور واحد.
+- لا تضف أي معلومة غير موجودة في المصادر.
+- حافظ على الأسماء والأرقام والتواريخ.
+- لا تستخدم كلمة "المصدر".
+- لا تضع روابط.
+- لا تضع هاشتاغات.
+- ابدأ دائماً بـ 🔴.
+- بعد 🔴 اكتب أسماء المؤسسات التي تؤكد نفس الواقعة مباشرة.
+- إذا تعددت المؤسسات، افصل بينها بالفاصلة العربية "،" وليس "و".
+- لا تضف مقدمة أو تعليقاً أو تفسيراً.
+- الصيغة الوحيدة:
+🔴 اسم المصدر، اسم المصدر: نص الخبر
+- إذا لم يكن الخبر مهماً: SKIP
+""".strip()
+
+    result = openai_call(prompt, max_tokens=300)
+
+    if not result:
+        return None
+
+    result = clean_final(result)
+
+    if result.upper() == "SKIP":
+        return None
+
+    # حماية إضافية من خروج النموذج عن الصيغة.
+    if not result.startswith("🔴"):
+        result = "🔴 " + result
+
+    return result
+
+
+def send(message):
     try:
-
-        response = requests.post(
-            telegram_url,
-            data=data,
-            timeout=30,
+        response = session.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            data={
+                "chat_id": CHANNEL,
+                "text": message,
+                "disable_web_page_preview": True
+            },
+            timeout=30
         )
 
-        print(
-            "\n📨 Telegram Status:",
-            response.status_code
-        )
+        print("📨 Telegram Status:", response.status_code)
 
-        print(
-            response.text
-        )
+        if response.status_code != 200:
+            print(response.text)
 
-        if response.status_code == 200:
+        return response.status_code == 200
 
-            print(
-                "✅ تم إرسال الخبر إلى تيليغرام بنجاح"
-            )
-
-            return True
-
-        print(
-            "❌ فشل إرسال الخبر إلى تيليغرام"
-        )
-
+    except Exception as exc:
+        print("❌ Telegram:", exc)
         return False
 
-    except Exception as e:
-
-        print(
-            f"❌ خطأ في Telegram: {e}"
-        )
-
-        return False
-
-
-# =========================================================
-# التشغيل الرئيسي
-# =========================================================
 
 def main():
+    print("=" * 70)
+    print("📰 نظام الأخبار السياسية العاجلة - الإصدار الجديد")
+    print("⚡ أولوية قصوى: إيران 🇮🇷 ↔ أمريكا 🇺🇸")
+    print("🌍 العراق + العالم العربي + العالم")
+    print(f"📢 الحد الأقصى للنشر في التشغيل: {MAX_POSTS_PER_RUN}")
+    print(f"⏱️ الأخبار الحديثة ضمن آخر: {MAX_AGE_HOURS} ساعة")
+    print("=" * 70)
 
-    print("=" * 55)
-    print("📰 نظام الأخبار السياسية")
-    print("=" * 55)
+    seen = load_seen()
 
-    print(
-        f"📢 الحد الأقصى للنشر في هذا التشغيل: "
-        f"{MAX_POSTS_PER_RUN}"
-    )
+    all_news = fetch_news()
+    print(f"\n📰 مجموع الأخبار السياسية الحديثة المقروءة: {len(all_news)}")
 
-    # =====================================================
-    # جلب الأخبار
-    # =====================================================
+    # أول فلتر: لا نعيد الخبر المنشور سابقاً.
+    fresh = [
+        article for article in all_news
+        if not already_seen(article, seen)
+    ]
 
-    news = fetch_news()
+    print(f"🆕 بعد منع التكرار: {len(fresh)}")
 
-    if not news:
-
-        print(
-            "❌ لم يتم العثور على أخبار"
-        )
-
+    if not fresh:
+        print("ℹ️ لا توجد أخبار جديدة قابلة للنشر.")
+        save_seen(seen)
         return
 
-    # =====================================================
-    # تجميع الأخبار المتشابهة
-    # =====================================================
+    # نجمع الأخبار التي تتحدث عن الواقعة نفسها.
+    groups = group_news(fresh)
 
-    groups = group_news(
-        news
-    )
+    print(f"🧩 عدد مجموعات الأحداث: {len(groups)}")
 
-    # =====================================================
-    # التحقق من الأخبار المؤكدة
-    # =====================================================
+    # نختار أهم الأخبار مع تنويع المصادر/المناطق.
+    groups = diversify_groups(groups)
 
-    verified = verified_news(
-        groups
-    )
-
-    if not verified:
-
-        print(
-            "❌ لا توجد أخبار مؤكدة من مصدرين."
-        )
-
-        return
-
-    # =====================================================
-    # تحليل ونشر الأخبار
-    # =====================================================
+    print(f"🎯 المجموعات المختارة للنشر/التحقق: {len(groups)}")
 
     published = 0
+    published_fingerprints = []
 
-    for group in verified:
-
-        # التوقف بعد الوصول إلى الحد الأقصى
+    for index, group in enumerate(groups, start=1):
         if published >= MAX_POSTS_PER_RUN:
-
-            print(
-                f"\n🛑 تم الوصول إلى الحد الأقصى "
-                f"({MAX_POSTS_PER_RUN} أخبار)"
-            )
-
             break
 
-        print(
-            "\n" + "=" * 55
-        )
-
-        print(
-            "📰 خبر مؤكد من عدة مصادر"
-        )
+        print("\n" + "=" * 70)
+        print(f"🔎 المجموعة {index}")
 
         for article in group:
-
             print(
-                f"• {article['source']}: "
-                f"{article['title']}"
+                f"• [{article['country']}] "
+                f"{article['source']} | {article['title']}"
             )
 
-        # =================================================
-        # تحليل الخبر
-        # =================================================
-
-        result = analyze_news(
-            group
-        )
+        result = analyze(group)
 
         if not result:
-
+            print("⏭️ تم تجاهل المجموعة: غير مؤكدة أو غير مهمة.")
             continue
 
-        print(
-            "\n📢 الخبر النهائي:"
+        # منع تكرار مجموعتين متشابهتين داخل نفس التشغيل.
+        result_body = re.sub(r"^🔴\s*", "", result).strip()
+
+        duplicate_in_run = any(
+            similarity(result_body, old) >= 0.78
+            for old in published_fingerprints
         )
 
-        print(
-            result
-        )
+        if duplicate_in_run:
+            print("⛔ تكرار داخل التشغيل نفسه — لن يُنشر.")
+            continue
 
-        # =================================================
-        # إرسال إلى Telegram
-        # =================================================
+        print("\n📢 الخبر النهائي:")
+        print(result)
 
-        success = send_to_telegram(
-            result
-        )
-
-        if success:
-
+        if send(result):
             published += 1
+            published_fingerprints.append(result_body)
+
+            # نحفظ التكرار فقط بعد نجاح Telegram.
+            remember_group(group, result, seen)
+            save_seen(seen)
 
             print(
-                f"✅ تم نشر الخبر رقم "
-                f"{published} من أصل "
-                f"{MAX_POSTS_PER_RUN}"
+                f"✅ تم نشر الخبر {published} "
+                f"من أصل {MAX_POSTS_PER_RUN}"
             )
+        else:
+            print("❌ فشل الإرسال — لم نضع الخبر في سجل المنشور.")
 
-    # =====================================================
-    # النتيجة النهائية
-    # =====================================================
+    save_seen(seen)
 
-    if published == 0:
+    print("\n" + "=" * 70)
+    print(f"🎉 انتهى التشغيل. عدد المنشورات الناجحة: {published}")
+    print("💾 سجل التكرار محفوظ بانتظار خطوة GitHub لحفظه في المستودع.")
+    print("=" * 70)
 
-        print(
-            "\n⏭️ لم يتم نشر أي خبر سياسي مهم."
-        )
-
-    else:
-
-        print(
-            "\n" + "=" * 55
-        )
-
-        print(
-            f"🎉 انتهى التشغيل."
-        )
-
-        print(
-            f"📰 عدد الأخبار المنشورة: "
-            f"{published}"
-        )
-
-        print(
-            "=" * 55
-        )
-
-
-# =========================================================
-# بدء البرنامج
-# =========================================================
 
 if __name__ == "__main__":
     main()
