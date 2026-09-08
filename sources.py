@@ -1,352 +1,320 @@
 # sources.py
-# ==========================================
-# مصادر نظام الأخبار السياسية
-# عراقية + عربية + عالمية
-# ==========================================
+# 300 مصدر: 100 عراقي + 100 عربي + 100 عالمي
+# Google News RSS site-search يستخدم لجلب الأخبار حتى من المواقع التي لا توفر RSS مباشر.
 
 SOURCES = [
+    {'name': 'وكالة الأنباء العراقية', 'country': 'Iraq', 'type': 'news', 'website': 'https://ina.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aina.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شفق نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://shafaq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ashafaq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'السومرية', 'country': 'Iraq', 'type': 'news', 'website': 'https://alsumaria.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalsumaria.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشرقية', 'country': 'Iraq', 'type': 'news', 'website': 'https://alsharqiya.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalsharqiya.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'دجلة', 'country': 'Iraq', 'type': 'news', 'website': 'https://dijlah.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Adijlah.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شبكة الإعلام العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://imn.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aimn.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الصباح', 'country': 'Iraq', 'type': 'news', 'website': 'https://alsabaah.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalsabaah.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المدى', 'country': 'Iraq', 'type': 'news', 'website': 'https://almadapaper.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmadapaper.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الزمان', 'country': 'Iraq', 'type': 'news', 'website': 'https://azzaman.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aazzaman.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'كتابات', 'country': 'Iraq', 'type': 'news', 'website': 'https://kitabat.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Akitabat.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'صوت العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://sotaliraq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Asotaliraq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'باسنيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://basnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Abasnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'روداو', 'country': 'Iraq', 'type': 'news', 'website': 'https://rudaw.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Arudaw.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'كردستان 24', 'country': 'Iraq', 'type': 'news', 'website': 'https://kurdistan24.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Akurdistan24.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'آوێنە', 'country': 'Iraq', 'type': 'news', 'website': 'https://awene.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aawene.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة نينا', 'country': 'Iraq', 'type': 'news', 'website': 'https://ninanews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aninanews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'بغداد اليوم', 'country': 'Iraq', 'type': 'news', 'website': 'https://baghdadtoday.news/', 'feed': 'https://news.google.com/rss/search?q=site%3Abaghdadtoday.news&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ناس', 'country': 'Iraq', 'type': 'news', 'website': 'https://nasnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anasnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المسلة', 'country': 'Iraq', 'type': 'news', 'website': 'https://almasalah.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmasalah.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الفرات نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://alforatnews.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalforatnews.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شبكة أخبار العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://aliraqnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaliraqnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة نون الخبرية', 'country': 'Iraq', 'type': 'news', 'website': 'https://non14.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Anon14.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'مانكيش', 'country': 'Iraq', 'type': 'news', 'website': 'https://mangish.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Amangish.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ليفين بريس', 'country': 'Iraq', 'type': 'news', 'website': 'https://lvinpress.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Alvinpress.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'إكس بات', 'country': 'Iraq', 'type': 'news', 'website': 'https://xebat.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Axebat.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة المعلومة', 'country': 'Iraq', 'type': 'news', 'website': 'https://almaalomah.me/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmaalomah.me&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة النبأ', 'country': 'Iraq', 'type': 'news', 'website': 'https://n.annabaa.org/', 'feed': 'https://news.google.com/rss/search?q=site%3An.annabaa.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'النعيم نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://naeemnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anaeemnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الراصد العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://alrasheedmedia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalrasheedmedia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العهد نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://alahadnews.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalahadnews.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المربد', 'country': 'Iraq', 'type': 'news', 'website': 'https://al-mirbad.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-mirbad.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'القرطاس نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://al-qurtas.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-qurtas.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المدار نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://almadarnews.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmadarnews.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الفرات الأوسط', 'country': 'Iraq', 'type': 'news', 'website': 'https://alfuratnews.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalfuratnews.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المركز الخبري الوطني', 'country': 'Iraq', 'type': 'news', 'website': 'https://nnciraq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Annciraq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الاقتصاد نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://economy-news.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aeconomy-news.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'أخبار العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqakhbar.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqakhbar.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العراق اليوم', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqtoday.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqtoday.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العراق نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqinews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqinews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'إيرث نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://earthiq.news/', 'feed': 'https://news.google.com/rss/search?q=site%3Aearthiq.news&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وطن نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://watannews-iraq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Awatannews-iraq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الموقف العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqipressagency.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqipressagency.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة يقين', 'country': 'Iraq', 'type': 'news', 'website': 'https://yaqein.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Ayaqein.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة أنباء براثا', 'country': 'Iraq', 'type': 'news', 'website': 'https://burathanews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aburathanews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المستقلة', 'country': 'Iraq', 'type': 'news', 'website': 'https://mustaqila.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Amustaqila.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المراقب العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://almuraqeb-aliraqi.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmuraqeb-aliraqi.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الغدير', 'country': 'Iraq', 'type': 'news', 'website': 'https://alghadeer.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalghadeer.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العهد', 'country': 'Iraq', 'type': 'news', 'website': 'https://alahad.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalahad.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الصباح الجديد', 'country': 'Iraq', 'type': 'news', 'website': 'https://newsabah.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anewsabah.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'بغداد بوست', 'country': 'Iraq', 'type': 'news', 'website': 'https://baghdadpost.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Abaghdadpost.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'بغداد 24', 'country': 'Iraq', 'type': 'news', 'website': 'https://baghdad24.news/', 'feed': 'https://news.google.com/rss/search?q=site%3Abaghdad24.news&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العراق نت', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraq.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaq.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العراق نيوز 24', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqnews24.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqnews24.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الخبر العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://al-khabar-iraqi.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-khabar-iraqi.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شبكة العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqnetwork.news/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqnetwork.news&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عين العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://ainiraqnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aainiraqnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'القرار العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://alqarar-aliraqi.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalqarar-aliraqi.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشارع العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://alsharaa.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalsharaa.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'النهار العراقي', 'country': 'Iraq', 'type': 'news', 'website': 'https://annahar-iraq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aannahar-iraq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الرافدين', 'country': 'Iraq', 'type': 'news', 'website': 'https://alrafidain.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalrafidain.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الراية العراقية', 'country': 'Iraq', 'type': 'news', 'website': 'https://alrayy.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalrayy.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الخبر برس', 'country': 'Iraq', 'type': 'news', 'website': 'https://alkhabarpress.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalkhabarpress.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'النافذة', 'country': 'Iraq', 'type': 'news', 'website': 'https://alnafedh.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalnafedh.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'صدى العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://sada-iraq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Asada-iraq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'اليوم الثامن', 'country': 'Iraq', 'type': 'news', 'website': 'https://8thday.com/', 'feed': 'https://news.google.com/rss/search?q=site%3A8thday.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العراق الأخباري', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqakhbari.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqakhbari.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'موازين نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://mawazin.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Amawazin.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'أين نيوز', 'country': 'Iraq', 'type': 'news', 'website': 'https://aynaliraqnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaynaliraqnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشرق الأوسط العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://aawsat.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaawsat.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الحرة العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://alhurra.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalhurra.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العربية العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://alarabiya.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalarabiya.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الجزيرة العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://aljazeera.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaljazeera.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الميادين العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://almayadeen.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmayadeen.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العربي الجديد العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://alaraby.co.uk/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalaraby.co.uk&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العراق الاقتصادي', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraq-businessnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaq-businessnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraq Oil Report', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqoilreport.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqoilreport.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Kurdistan Tribune', 'country': 'Iraq', 'type': 'news', 'website': 'https://kurdistantribune.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Akurdistantribune.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NRT', 'country': 'Iraq', 'type': 'news', 'website': 'https://nrttv.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anrttv.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Nalia Radio', 'country': 'Iraq', 'type': 'news', 'website': 'https://nalia.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Analia.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Speda', 'country': 'Iraq', 'type': 'news', 'website': 'https://speda.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aspeda.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'KNN', 'country': 'Iraq', 'type': 'news', 'website': 'https://knnc.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aknnc.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Kurdistan Media', 'country': 'Iraq', 'type': 'news', 'website': 'https://kurdistanmedia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Akurdistanmedia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Kurdistan Regional Government', 'country': 'Iraq', 'type': 'news', 'website': 'https://gov.krd/', 'feed': 'https://news.google.com/rss/search?q=site%3Agov.krd&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Parliament', 'country': 'Iraq', 'type': 'news', 'website': 'https://parliament.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aparliament.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Presidency', 'country': 'Iraq', 'type': 'news', 'website': 'https://presidency.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Apresidency.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Prime Minister', 'country': 'Iraq', 'type': 'news', 'website': 'https://pm.gov.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Apm.gov.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Foreign Ministry', 'country': 'Iraq', 'type': 'news', 'website': 'https://mofa.gov.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Amofa.gov.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Ministry of Interior', 'country': 'Iraq', 'type': 'news', 'website': 'https://moi.gov.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Amoi.gov.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Ministry of Defense', 'country': 'Iraq', 'type': 'news', 'website': 'https://mod.mil.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Amod.mil.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Iraqi Election Commission', 'country': 'Iraq', 'type': 'news', 'website': 'https://ihec.iq/', 'feed': 'https://news.google.com/rss/search?q=site%3Aihec.iq&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شبكة النهرين', 'country': 'Iraq', 'type': 'news', 'website': 'https://alnahrain.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalnahrain.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الراصد', 'country': 'Iraq', 'type': 'news', 'website': 'https://alrashedmedia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalrashedmedia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة البغدادية', 'country': 'Iraq', 'type': 'news', 'website': 'https://baghdadia.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Abaghdadia.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'قناة الموصل', 'country': 'Iraq', 'type': 'news', 'website': 'https://mosul.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Amosul.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة العراق المركزي', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqicenter.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqicenter.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شبكة أخبار البصرة', 'country': 'Iraq', 'type': 'news', 'website': 'https://basranews.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Abasranews.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'أخبار نينوى', 'country': 'Iraq', 'type': 'news', 'website': 'https://ninawnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aninawnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'أخبار ذي قار', 'country': 'Iraq', 'type': 'news', 'website': 'https://nasiriyah.news/', 'feed': 'https://news.google.com/rss/search?q=site%3Anasiriyah.news&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة أنباء العراق', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqna.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqna.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'شبكة أخبار العراق السياسية', 'country': 'Iraq', 'type': 'news', 'website': 'https://iraqpolitics.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Airaqpolitics.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
 
-    # ==================================================
-    # 🇮🇶 المصادر العراقية
-    # ==================================================
+    {'name': 'الجزيرة', 'country': 'Arab', 'type': 'news', 'website': 'https://aljazeera.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaljazeera.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العربية', 'country': 'Arab', 'type': 'news', 'website': 'https://alarabiya.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalarabiya.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الحدث', 'country': 'Arab', 'type': 'news', 'website': 'https://alhadath.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalhadath.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'سكاي نيوز عربية', 'country': 'Arab', 'type': 'news', 'website': 'https://skynewsarabia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Askynewsarabia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشرق', 'country': 'Arab', 'type': 'news', 'website': 'https://asharq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aasharq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشرق الأوسط', 'country': 'Arab', 'type': 'news', 'website': 'https://aawsat.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaawsat.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العربي الجديد', 'country': 'Arab', 'type': 'news', 'website': 'https://alaraby.co.uk/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalaraby.co.uk&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الحرة', 'country': 'Arab', 'type': 'news', 'website': 'https://alhurra.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalhurra.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'فرانس 24 عربي', 'country': 'Arab', 'type': 'news', 'website': 'https://france24.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Afrance24.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'بي بي سي عربي', 'country': 'Arab', 'type': 'news', 'website': 'https://bbc.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Abbc.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CNN العربية', 'country': 'Arab', 'type': 'news', 'website': 'https://arabic.cnn.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aarabic.cnn.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'RT Arabic', 'country': 'Arab', 'type': 'news', 'website': 'https://arabic.rt.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aarabic.rt.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الميادين', 'country': 'Arab', 'type': 'news', 'website': 'https://almayadeen.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmayadeen.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الجديد', 'country': 'Arab', 'type': 'news', 'website': 'https://aljadeed.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaljadeed.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'LBCI', 'country': 'Arab', 'type': 'news', 'website': 'https://lbcgroup.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Albcgroup.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'MTV لبنان', 'country': 'Arab', 'type': 'news', 'website': 'https://mtv.com.lb/', 'feed': 'https://news.google.com/rss/search?q=site%3Amtv.com.lb&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'النهار', 'country': 'Arab', 'type': 'news', 'website': 'https://annahar.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aannahar.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الجمهورية اللبنانية', 'country': 'Arab', 'type': 'news', 'website': 'https://aljoumhouria.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaljoumhouria.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الأخبار اللبنانية', 'country': 'Arab', 'type': 'news', 'website': 'https://al-akhbar.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-akhbar.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'لبنان 24', 'country': 'Arab', 'type': 'news', 'website': 'https://lebanon24.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Alebanon24.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الوكالة الوطنية للإعلام لبنان', 'country': 'Arab', 'type': 'news', 'website': 'https://nna-leb.gov.lb/', 'feed': 'https://news.google.com/rss/search?q=site%3Anna-leb.gov.lb&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المدن', 'country': 'Arab', 'type': 'news', 'website': 'https://almodon.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmodon.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'جنوبية', 'country': 'Arab', 'type': 'news', 'website': 'https://janoubia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ajanoubia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ليبانون ديبايت', 'country': 'Arab', 'type': 'news', 'website': 'https://lebanondebate.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Alebanondebate.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'صوت بيروت إنترناشونال', 'country': 'Arab', 'type': 'news', 'website': 'https://sawtbeirut.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Asawtbeirut.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'مصر اليوم', 'country': 'Arab', 'type': 'news', 'website': 'https://almasryalyoum.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmasryalyoum.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'اليوم السابع', 'country': 'Arab', 'type': 'news', 'website': 'https://youm7.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ayoum7.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشروق مصر', 'country': 'Arab', 'type': 'news', 'website': 'https://shorouknews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ashorouknews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'أخبار اليوم مصر', 'country': 'Arab', 'type': 'news', 'website': 'https://akhbarelyom.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aakhbarelyom.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الوطن مصر', 'country': 'Arab', 'type': 'news', 'website': 'https://elwatannews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aelwatannews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'بوابة الأهرام', 'country': 'Arab', 'type': 'news', 'website': 'https://gate.ahram.org.eg/', 'feed': 'https://news.google.com/rss/search?q=site%3Agate.ahram.org.eg&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الأهرام', 'country': 'Arab', 'type': 'news', 'website': 'https://ahram.org.eg/', 'feed': 'https://news.google.com/rss/search?q=site%3Aahram.org.eg&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشروق الجزائر', 'country': 'Arab', 'type': 'news', 'website': 'https://echoroukonline.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aechoroukonline.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الخبر الجزائر', 'country': 'Arab', 'type': 'news', 'website': 'https://elkhabar.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aelkhabar.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'النهار الجزائر', 'country': 'Arab', 'type': 'news', 'website': 'https://ennaharonline.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aennaharonline.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشروق التونسية', 'country': 'Arab', 'type': 'news', 'website': 'https://alchourouk.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalchourouk.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الصباح تونس', 'country': 'Arab', 'type': 'news', 'website': 'https://assabahnews.tn/', 'feed': 'https://news.google.com/rss/search?q=site%3Aassabahnews.tn&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'موزاييك', 'country': 'Arab', 'type': 'news', 'website': 'https://mosaiquefm.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Amosaiquefm.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الجزائرية الأولى', 'country': 'Arab', 'type': 'news', 'website': 'https://entv.dz/', 'feed': 'https://news.google.com/rss/search?q=site%3Aentv.dz&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء الجزائرية', 'country': 'Arab', 'type': 'news', 'website': 'https://aps.dz/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaps.dz&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة تونس أفريقيا للأنباء', 'country': 'Arab', 'type': 'news', 'website': 'https://tap.info.tn/', 'feed': 'https://news.google.com/rss/search?q=site%3Atap.info.tn&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة المغرب العربي للأنباء', 'country': 'Arab', 'type': 'news', 'website': 'https://mapnews.ma/', 'feed': 'https://news.google.com/rss/search?q=site%3Amapnews.ma&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'هسبريس', 'country': 'Arab', 'type': 'news', 'website': 'https://hespress.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ahespress.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'اليوم 24', 'country': 'Arab', 'type': 'news', 'website': 'https://alyaoum24.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalyaoum24.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'هبة بريس', 'country': 'Arab', 'type': 'news', 'website': 'https://hibapress.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ahibapress.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الأيام 24', 'country': 'Arab', 'type': 'news', 'website': 'https://alayam24.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalayam24.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الصباح المغربية', 'country': 'Arab', 'type': 'news', 'website': 'https://assabah.ma/', 'feed': 'https://news.google.com/rss/search?q=site%3Aassabah.ma&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العمق المغربي', 'country': 'Arab', 'type': 'news', 'website': 'https://al3omk.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal3omk.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ميدل إيست مونيتور عربي', 'country': 'Arab', 'type': 'news', 'website': 'https://middleeastmonitor.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Amiddleeastmonitor.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عمان نت', 'country': 'Arab', 'type': 'news', 'website': 'https://ammannet.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aammannet.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الغد الأردني', 'country': 'Arab', 'type': 'news', 'website': 'https://alghad.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalghad.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الرأي الأردنية', 'country': 'Arab', 'type': 'news', 'website': 'https://alrai.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalrai.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الدستور الأردنية', 'country': 'Arab', 'type': 'news', 'website': 'https://addustour.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaddustour.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'خبرني', 'country': 'Arab', 'type': 'news', 'website': 'https://khaberni.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Akhaberni.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عمون', 'country': 'Arab', 'type': 'news', 'website': 'https://ammonnews.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aammonnews.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء الأردنية', 'country': 'Arab', 'type': 'news', 'website': 'https://petra.gov.jo/', 'feed': 'https://news.google.com/rss/search?q=site%3Apetra.gov.jo&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء السعودية', 'country': 'Arab', 'type': 'news', 'website': 'https://spa.gov.sa/', 'feed': 'https://news.google.com/rss/search?q=site%3Aspa.gov.sa&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عكاظ', 'country': 'Arab', 'type': 'news', 'website': 'https://okaz.com.sa/', 'feed': 'https://news.google.com/rss/search?q=site%3Aokaz.com.sa&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الرياض', 'country': 'Arab', 'type': 'news', 'website': 'https://alriyadh.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalriyadh.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'سبق', 'country': 'Arab', 'type': 'news', 'website': 'https://sabq.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Asabq.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الوطن السعودية', 'country': 'Arab', 'type': 'news', 'website': 'https://alwatan.com.sa/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalwatan.com.sa&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المدينة السعودية', 'country': 'Arab', 'type': 'news', 'website': 'https://al-madina.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-madina.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'مكة', 'country': 'Arab', 'type': 'news', 'website': 'https://makkahnewspaper.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Amakkahnewspaper.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عرب نيوز', 'country': 'Arab', 'type': 'news', 'website': 'https://arabnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aarabnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'إيلاف', 'country': 'Arab', 'type': 'news', 'website': 'https://elaph.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aelaph.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الخليج الإماراتية', 'country': 'Arab', 'type': 'news', 'website': 'https://alkhaleej.ae/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalkhaleej.ae&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'البيان', 'country': 'Arab', 'type': 'news', 'website': 'https://albayan.ae/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalbayan.ae&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الإمارات اليوم', 'country': 'Arab', 'type': 'news', 'website': 'https://emarat-alyoum.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aemarat-alyoum.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الاتحاد الإماراتية', 'country': 'Arab', 'type': 'news', 'website': 'https://alittihad.ae/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalittihad.ae&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': '24 الإمارات', 'country': 'Arab', 'type': 'news', 'website': 'https://24.ae/', 'feed': 'https://news.google.com/rss/search?q=site%3A24.ae&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وام', 'country': 'Arab', 'type': 'news', 'website': 'https://wam.ae/', 'feed': 'https://news.google.com/rss/search?q=site%3Awam.ae&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الخليج تايمز', 'country': 'Arab', 'type': 'news', 'website': 'https://khaleejtimes.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Akhaleejtimes.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الراية القطرية', 'country': 'Arab', 'type': 'news', 'website': 'https://raya.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Araya.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الشرق قطر', 'country': 'Arab', 'type': 'news', 'website': 'https://al-sharq.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-sharq.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'العرب قطر', 'country': 'Arab', 'type': 'news', 'website': 'https://alarab.qa/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalarab.qa&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'قنا', 'country': 'Arab', 'type': 'news', 'website': 'https://qna.org.qa/', 'feed': 'https://news.google.com/rss/search?q=site%3Aqna.org.qa&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الرؤية', 'country': 'Arab', 'type': 'news', 'website': 'https://alroeya.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalroeya.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'القبس الكويتية', 'country': 'Arab', 'type': 'news', 'website': 'https://alqabas.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalqabas.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الأنباء الكويتية', 'country': 'Arab', 'type': 'news', 'website': 'https://alanba.com.kw/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalanba.com.kw&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الجريدة الكويتية', 'country': 'Arab', 'type': 'news', 'website': 'https://aljarida.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaljarida.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'كونا', 'country': 'Arab', 'type': 'news', 'website': 'https://kuna.net.kw/', 'feed': 'https://news.google.com/rss/search?q=site%3Akuna.net.kw&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الراي الكويتية', 'country': 'Arab', 'type': 'news', 'website': 'https://alraimedia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalraimedia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الوطن الكويتية', 'country': 'Arab', 'type': 'news', 'website': 'https://alwatan.kuwait.tt/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalwatan.kuwait.tt&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الأيام البحرينية', 'country': 'Arab', 'type': 'news', 'website': 'https://alayam.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalayam.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'أخبار الخليج', 'country': 'Arab', 'type': 'news', 'website': 'https://akhbar-alkhaleej.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aakhbar-alkhaleej.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة أنباء البحرين', 'country': 'Arab', 'type': 'news', 'website': 'https://bna.bh/', 'feed': 'https://news.google.com/rss/search?q=site%3Abna.bh&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الوطن البحرينية', 'country': 'Arab', 'type': 'news', 'website': 'https://alwatannews.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalwatannews.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء العمانية', 'country': 'Arab', 'type': 'news', 'website': 'https://omannews.gov.om/', 'feed': 'https://news.google.com/rss/search?q=site%3Aomannews.gov.om&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عمان', 'country': 'Arab', 'type': 'news', 'website': 'https://omandaily.om/', 'feed': 'https://news.google.com/rss/search?q=site%3Aomandaily.om&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الرؤية العمانية', 'country': 'Arab', 'type': 'news', 'website': 'https://alroya.om/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalroya.om&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء اليمنية', 'country': 'Arab', 'type': 'news', 'website': 'https://saba.ye/', 'feed': 'https://news.google.com/rss/search?q=site%3Asaba.ye&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المشهد اليمني', 'country': 'Arab', 'type': 'news', 'website': 'https://almashhad-alyemeni.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmashhad-alyemeni.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المصدر أونلاين', 'country': 'Arab', 'type': 'news', 'website': 'https://almasdaronline.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalmasdaronline.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء السورية', 'country': 'Arab', 'type': 'news', 'website': 'https://sana.sy/', 'feed': 'https://news.google.com/rss/search?q=site%3Asana.sy&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'الوطن السورية', 'country': 'Arab', 'type': 'news', 'website': 'https://alwatan.sy/', 'feed': 'https://news.google.com/rss/search?q=site%3Aalwatan.sy&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'عنب بلدي', 'country': 'Arab', 'type': 'news', 'website': 'https://enabbaladi.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Aenabbaladi.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'سوريا تي في', 'country': 'Arab', 'type': 'news', 'website': 'https://syria.tv/', 'feed': 'https://news.google.com/rss/search?q=site%3Asyria.tv&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'المرصد السوري', 'country': 'Arab', 'type': 'news', 'website': 'https://syriahr.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Asyriahr.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'وكالة الأنباء الفلسطينية', 'country': 'Arab', 'type': 'news', 'website': 'https://wafa.ps/', 'feed': 'https://news.google.com/rss/search?q=site%3Awafa.ps&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'معا', 'country': 'Arab', 'type': 'news', 'website': 'https://maannews.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Amaannews.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
 
-    {
-        "name": "وكالة الأنباء العراقية المستقلة",
-        "country": "Iraq",
-        "type": "agency",
-        "feed": "https://www.ina-iraq.com/news/important/rss",
-    },
-
-    {
-        "name": "شفق نيوز",
-        "country": "Iraq",
-        "type": "agency",
-        "feed": "https://www.shafaq.com/ar/rss",
-    },
-
-    {
-        "name": "السومرية",
-        "country": "Iraq",
-        "type": "channel",
-        "feed": "https://www.alsumaria.tv/Rss/News/ar/1/سياسة",
-    },
-
-    {
-        "name": "السومرية - دوليات",
-        "country": "Iraq",
-        "type": "channel",
-        "feed": "https://www.alsumaria.tv/Rss/News/ar/49/دوليات",
-    },
-
-    {
-        "name": "السومرية - آخر الأخبار",
-        "country": "Iraq",
-        "type": "channel",
-        "feed": "https://www.alsumaria.tv/Rss/iraq-latest-news/ar",
-    },
-
-    {
-        "name": "الشرقية",
-        "country": "Iraq",
-        "type": "channel",
-        "feed": None,
-        "website": "https://www.alsharqiya.com/",
-    },
-
-    {
-        "name": "دجلة",
-        "country": "Iraq",
-        "type": "channel",
-        "feed": None,
-        "website": "https://dijlah.tv/",
-    },
-
-    {
-        "name": "شبكة الإعلام العراقي",
-        "country": "Iraq",
-        "type": "network",
-        "feed": None,
-        "website": "https://imn.gov.iq/",
-    },
-
-    {
-        "name": "وكالة الأنباء العراقية",
-        "country": "Iraq",
-        "type": "agency",
-        "feed": None,
-        "website": "https://ina.iq/",
-    },
-
-    {
-        "name": "الصباح",
-        "country": "Iraq",
-        "type": "newspaper",
-        "feed": None,
-        "website": "https://alsabaah.iq/",
-    },
-
-    {
-        "name": "المدى",
-        "country": "Iraq",
-        "type": "newspaper",
-        "feed": None,
-        "website": "https://almadapaper.net/",
-    },
-
-    {
-        "name": "الزمان",
-        "country": "Iraq",
-        "type": "newspaper",
-        "feed": None,
-        "website": "https://www.azzaman.com/",
-    },
-
-    {
-        "name": "كتابات",
-        "country": "Iraq",
-        "type": "news",
-        "feed": "https://kitabat.com/feed/",
-    },
-
-    {
-        "name": "صوت العراق",
-        "country": "Iraq",
-        "type": "news",
-        "feed": "https://www.sotaliraq.com/feed/",
-    },
-
-    {
-        "name": "شبكة أخبار العراق",
-        "country": "Iraq",
-        "type": "news",
-        "feed": None,
-        "website": "https://aliraqnews.com/",
-    },
-
-    {
-        "name": "بغداد اليوم",
-        "country": "Iraq",
-        "type": "news",
-        "feed": None,
-        "website": "https://baghdadtoday.news/",
-    },
-
-    {
-        "name": "ناس",
-        "country": "Iraq",
-        "type": "news",
-        "feed": None,
-        "website": "https://www.nasnews.com/",
-    },
-
-    {
-        "name": "المسلة",
-        "country": "Iraq",
-        "type": "news",
-        "feed": None,
-        "website": "https://almasalah.com/",
-    },
-
-    {
-        "name": "باسنيوز",
-        "country": "Iraq",
-        "type": "news",
-        "feed": None,
-        "website": "https://www.basnews.com/",
-    },
-
-
-    # ==================================================
-    # 🌍 مصادر عربية
-    # ==================================================
-
-    {
-        "name": "الجزيرة",
-        "country": "Arab",
-        "type": "channel",
-        "feed": "https://www.aljazeera.com/xml/rss/all.xml",
-    },
-
-    {
-        "name": "الحدث",
-        "country": "Arab",
-        "type": "channel",
-        "feed": "https://www.alhadath.net/tools/mrss",
-    },
-
-    {
-        "name": "الجديد",
-        "country": "Arab",
-        "type": "channel",
-        "feed": "https://www.aljadeed.tv/rss/ar",
-    },
-
-    {
-        "name": "LBCI",
-        "country": "Arab",
-        "type": "channel",
-        "feed": "https://www.lbcgroup.tv/rss/ar",
-    },
-
-    {
-        "name": "العربية",
-        "country": "Arab",
-        "type": "channel",
-        "feed": None,
-        "website": "https://www.alarabiya.net/",
-    },
-
-    {
-        "name": "الشرق",
-        "country": "Arab",
-        "type": "channel",
-        "feed": None,
-        "website": "https://asharq.com/",
-    },
-
-    {
-        "name": "العربي الجديد",
-        "country": "Arab",
-        "type": "newspaper",
-        "feed": None,
-        "website": "https://www.alaraby.co.uk/",
-    },
-
-    {
-        "name": "الشرق الأوسط",
-        "country": "Arab",
-        "type": "newspaper",
-        "feed": None,
-        "website": "https://aawsat.com/",
-    },
-
-    {
-        "name": "الحرة",
-        "country": "Arab",
-        "type": "channel",
-        "feed": None,
-        "website": "https://www.alhurra.com/",
-    },
-
-    {
-        "name": "سكاي نيوز عربية",
-        "country": "Arab",
-        "type": "channel",
-        "feed": None,
-        "website": "https://www.skynewsarabia.com/",
-    },
-
-
-    # ==================================================
-    # 🌎 المصادر العالمية
-    # ==================================================
-
-    {
-        "name": "BBC World",
-        "country": "World",
-        "type": "channel",
-        "feed": "https://feeds.bbci.co.uk/news/world/rss.xml",
-    },
-
-    {
-        "name": "BBC Politics",
-        "country": "World",
-        "type": "channel",
-        "feed": None,
-        "website": "https://www.bbc.com/news/politics",
-    },
-
-    {
-        "name": "Reuters",
-        "country": "World",
-        "type": "agency",
-        "feed": (
-            "https://news.google.com/rss/search?"
-            "q=site%3Areuters.com"
-            "&hl=en-US&gl=US&ceid=US%3Aen"
-        ),
-    },
-
-    {
-        "name": "Associated Press",
-        "country": "World",
-        "type": "agency",
-        "feed": "https://apnews.com/rss/apf-world",
-    },
-
-    {
-        "name": "CNN World",
-        "country": "World",
-        "type": "channel",
-        "feed": "https://rss.cnn.com/rss/edition_world.rss",
-    },
-
-    {
-        "name": "France 24",
-        "country": "World",
-        "type": "channel",
-        "feed": "https://www.france24.com/en/rss",
-    },
-
-    {
-        "name": "The Guardian",
-        "country": "World",
-        "type": "newspaper",
-        "feed": "https://www.theguardian.com/world/rss",
-    },
-
-    {
-        "name": "NBC News",
-        "country": "World",
-        "type": "channel",
-        "feed": "https://feeds.nbcnews.com/feeds/worldnews",
-    },
-
-    {
-        "name": "Sky News",
-        "country": "World",
-        "type": "channel",
-        "feed": "https://news.sky.com/info/rss",
-    },
-
-    {
-        "name": "Al Jazeera English",
-        "country": "World",
-        "type": "channel",
-        "feed": "https://www.aljazeera.com/xml/rss/all.xml",
-    },
-
+    {'name': 'Reuters', 'country': 'World', 'type': 'news', 'website': 'https://reuters.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Areuters.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Associated Press', 'country': 'World', 'type': 'news', 'website': 'https://apnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aapnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'BBC World', 'country': 'World', 'type': 'news', 'website': 'https://bbc.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Abbc.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CNN', 'country': 'World', 'type': 'news', 'website': 'https://cnn.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Acnn.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Guardian', 'country': 'World', 'type': 'news', 'website': 'https://theguardian.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Atheguardian.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The New York Times', 'country': 'World', 'type': 'news', 'website': 'https://nytimes.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anytimes.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Washington Post', 'country': 'World', 'type': 'news', 'website': 'https://washingtonpost.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Awashingtonpost.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Wall Street Journal', 'country': 'World', 'type': 'news', 'website': 'https://wsj.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Awsj.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NBC News', 'country': 'World', 'type': 'news', 'website': 'https://nbcnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anbcnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CBS News', 'country': 'World', 'type': 'news', 'website': 'https://cbsnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Acbsnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ABC News', 'country': 'World', 'type': 'news', 'website': 'https://abcnews.go.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aabcnews.go.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Fox News', 'country': 'World', 'type': 'news', 'website': 'https://foxnews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Afoxnews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NPR', 'country': 'World', 'type': 'news', 'website': 'https://npr.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Anpr.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'PBS NewsHour', 'country': 'World', 'type': 'news', 'website': 'https://pbs.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Apbs.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'USA Today', 'country': 'World', 'type': 'news', 'website': 'https://usatoday.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ausatoday.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Politico', 'country': 'World', 'type': 'news', 'website': 'https://politico.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Apolitico.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Axios', 'country': 'World', 'type': 'news', 'website': 'https://axios.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaxios.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Hill', 'country': 'World', 'type': 'news', 'website': 'https://thehill.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Athehill.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Bloomberg', 'country': 'World', 'type': 'news', 'website': 'https://bloomberg.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Abloomberg.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Financial Times', 'country': 'World', 'type': 'news', 'website': 'https://ft.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aft.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CNBC', 'country': 'World', 'type': 'news', 'website': 'https://cnbc.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Acnbc.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Newsweek', 'country': 'World', 'type': 'news', 'website': 'https://newsweek.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anewsweek.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'TIME', 'country': 'World', 'type': 'news', 'website': 'https://time.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Atime.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Newsmax', 'country': 'World', 'type': 'news', 'website': 'https://newsmax.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anewsmax.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Al Jazeera English', 'country': 'World', 'type': 'news', 'website': 'https://aljazeera.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aaljazeera.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'France 24', 'country': 'World', 'type': 'news', 'website': 'https://france24.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Afrance24.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Deutsche Welle', 'country': 'World', 'type': 'news', 'website': 'https://dw.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Adw.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Euronews', 'country': 'World', 'type': 'news', 'website': 'https://euronews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aeuronews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Sky News', 'country': 'World', 'type': 'news', 'website': 'https://news.sky.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anews.sky.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Telegraph', 'country': 'World', 'type': 'news', 'website': 'https://telegraph.co.uk/', 'feed': 'https://news.google.com/rss/search?q=site%3Atelegraph.co.uk&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Independent', 'country': 'World', 'type': 'news', 'website': 'https://independent.co.uk/', 'feed': 'https://news.google.com/rss/search?q=site%3Aindependent.co.uk&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Times UK', 'country': 'World', 'type': 'news', 'website': 'https://thetimes.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Athetimes.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Economist', 'country': 'World', 'type': 'news', 'website': 'https://economist.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aeconomist.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Daily Mail', 'country': 'World', 'type': 'news', 'website': 'https://dailymail.co.uk/', 'feed': 'https://news.google.com/rss/search?q=site%3Adailymail.co.uk&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'TASS', 'country': 'World', 'type': 'news', 'website': 'https://tass.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Atass.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'RIA Novosti', 'country': 'World', 'type': 'news', 'website': 'https://ria.ru/', 'feed': 'https://news.google.com/rss/search?q=site%3Aria.ru&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'RT', 'country': 'World', 'type': 'news', 'website': 'https://rt.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Art.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Sputnik', 'country': 'World', 'type': 'news', 'website': 'https://sputniknews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Asputniknews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Interfax', 'country': 'World', 'type': 'news', 'website': 'https://interfax.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ainterfax.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Xinhua', 'country': 'World', 'type': 'news', 'website': 'https://xinhuanet.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Axinhuanet.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'China Daily', 'country': 'World', 'type': 'news', 'website': 'https://chinadaily.com.cn/', 'feed': 'https://news.google.com/rss/search?q=site%3Achinadaily.com.cn&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Global Times', 'country': 'World', 'type': 'news', 'website': 'https://globaltimes.cn/', 'feed': 'https://news.google.com/rss/search?q=site%3Aglobaltimes.cn&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CGTN', 'country': 'World', 'type': 'news', 'website': 'https://cgtn.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Acgtn.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'South China Morning Post', 'country': 'World', 'type': 'news', 'website': 'https://scmp.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ascmp.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NHK World', 'country': 'World', 'type': 'news', 'website': 'https://nhk.or.jp/', 'feed': 'https://news.google.com/rss/search?q=site%3Anhk.or.jp&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Kyodo News', 'country': 'World', 'type': 'news', 'website': 'https://kyodonews.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Akyodonews.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Japan Times', 'country': 'World', 'type': 'news', 'website': 'https://japantimes.co.jp/', 'feed': 'https://news.google.com/rss/search?q=site%3Ajapantimes.co.jp&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Asahi Shimbun', 'country': 'World', 'type': 'news', 'website': 'https://asahi.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aasahi.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Mainichi', 'country': 'World', 'type': 'news', 'website': 'https://mainichi.jp/', 'feed': 'https://news.google.com/rss/search?q=site%3Amainichi.jp&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Yomiuri Shimbun', 'country': 'World', 'type': 'news', 'website': 'https://yomiuri.co.jp/', 'feed': 'https://news.google.com/rss/search?q=site%3Ayomiuri.co.jp&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Yonhap', 'country': 'World', 'type': 'news', 'website': 'https://yna.co.kr/', 'feed': 'https://news.google.com/rss/search?q=site%3Ayna.co.kr&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Korea Herald', 'country': 'World', 'type': 'news', 'website': 'https://koreaherald.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Akoreaherald.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Korea Times', 'country': 'World', 'type': 'news', 'website': 'https://koreatimes.co.kr/', 'feed': 'https://news.google.com/rss/search?q=site%3Akoreatimes.co.kr&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Times of India', 'country': 'World', 'type': 'news', 'website': 'https://timesofindia.indiatimes.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Atimesofindia.indiatimes.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Hindu', 'country': 'World', 'type': 'news', 'website': 'https://thehindu.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Athehindu.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Indian Express', 'country': 'World', 'type': 'news', 'website': 'https://indianexpress.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aindianexpress.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Hindustan Times', 'country': 'World', 'type': 'news', 'website': 'https://hindustantimes.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Ahindustantimes.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NDTV', 'country': 'World', 'type': 'news', 'website': 'https://ndtv.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Andtv.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'India Today', 'country': 'World', 'type': 'news', 'website': 'https://indiatoday.in/', 'feed': 'https://news.google.com/rss/search?q=site%3Aindiatoday.in&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Deccan Herald', 'country': 'World', 'type': 'news', 'website': 'https://deccanherald.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Adeccanherald.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Telegraph India', 'country': 'World', 'type': 'news', 'website': 'https://telegraphindia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Atelegraphindia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ABC Australia', 'country': 'World', 'type': 'news', 'website': 'https://abc.net.au/', 'feed': 'https://news.google.com/rss/search?q=site%3Aabc.net.au&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'SBS News', 'country': 'World', 'type': 'news', 'website': 'https://sbs.com.au/', 'feed': 'https://news.google.com/rss/search?q=site%3Asbs.com.au&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Sydney Morning Herald', 'country': 'World', 'type': 'news', 'website': 'https://smh.com.au/', 'feed': 'https://news.google.com/rss/search?q=site%3Asmh.com.au&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Age', 'country': 'World', 'type': 'news', 'website': 'https://theage.com.au/', 'feed': 'https://news.google.com/rss/search?q=site%3Atheage.com.au&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Australian', 'country': 'World', 'type': 'news', 'website': 'https://theaustralian.com.au/', 'feed': 'https://news.google.com/rss/search?q=site%3Atheaustralian.com.au&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CBC', 'country': 'World', 'type': 'news', 'website': 'https://cbc.ca/', 'feed': 'https://news.google.com/rss/search?q=site%3Acbc.ca&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Global News Canada', 'country': 'World', 'type': 'news', 'website': 'https://globalnews.ca/', 'feed': 'https://news.google.com/rss/search?q=site%3Aglobalnews.ca&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'CTV News', 'country': 'World', 'type': 'news', 'website': 'https://ctvnews.ca/', 'feed': 'https://news.google.com/rss/search?q=site%3Actvnews.ca&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'National Post', 'country': 'World', 'type': 'news', 'website': 'https://nationalpost.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Anationalpost.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Toronto Star', 'country': 'World', 'type': 'news', 'website': 'https://thestar.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Athestar.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'La Presse', 'country': 'World', 'type': 'news', 'website': 'https://lapresse.ca/', 'feed': 'https://news.google.com/rss/search?q=site%3Alapresse.ca&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'El País', 'country': 'World', 'type': 'news', 'website': 'https://elpais.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aelpais.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'El Mundo', 'country': 'World', 'type': 'news', 'website': 'https://elmundo.es/', 'feed': 'https://news.google.com/rss/search?q=site%3Aelmundo.es&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ABC Spain', 'country': 'World', 'type': 'news', 'website': 'https://abc.es/', 'feed': 'https://news.google.com/rss/search?q=site%3Aabc.es&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'La Vanguardia', 'country': 'World', 'type': 'news', 'website': 'https://lavanguardia.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Alavanguardia.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Le Monde', 'country': 'World', 'type': 'news', 'website': 'https://lemonde.fr/', 'feed': 'https://news.google.com/rss/search?q=site%3Alemonde.fr&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Le Figaro', 'country': 'World', 'type': 'news', 'website': 'https://lefigaro.fr/', 'feed': 'https://news.google.com/rss/search?q=site%3Alefigaro.fr&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Libération', 'country': 'World', 'type': 'news', 'website': 'https://liberation.fr/', 'feed': 'https://news.google.com/rss/search?q=site%3Aliberation.fr&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Les Echos', 'country': 'World', 'type': 'news', 'website': 'https://lesechos.fr/', 'feed': 'https://news.google.com/rss/search?q=site%3Alesechos.fr&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Corriere della Sera', 'country': 'World', 'type': 'news', 'website': 'https://corriere.it/', 'feed': 'https://news.google.com/rss/search?q=site%3Acorriere.it&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'La Repubblica', 'country': 'World', 'type': 'news', 'website': 'https://repubblica.it/', 'feed': 'https://news.google.com/rss/search?q=site%3Arepubblica.it&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'ANSA', 'country': 'World', 'type': 'news', 'website': 'https://ansa.it/', 'feed': 'https://news.google.com/rss/search?q=site%3Aansa.it&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Der Spiegel', 'country': 'World', 'type': 'news', 'website': 'https://spiegel.de/', 'feed': 'https://news.google.com/rss/search?q=site%3Aspiegel.de&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Frankfurter Allgemeine', 'country': 'World', 'type': 'news', 'website': 'https://faz.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Afaz.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Die Welt', 'country': 'World', 'type': 'news', 'website': 'https://welt.de/', 'feed': 'https://news.google.com/rss/search?q=site%3Awelt.de&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Neue Zürcher Zeitung', 'country': 'World', 'type': 'news', 'website': 'https://nzz.ch/', 'feed': 'https://news.google.com/rss/search?q=site%3Anzz.ch&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Swissinfo', 'country': 'World', 'type': 'news', 'website': 'https://swissinfo.ch/', 'feed': 'https://news.google.com/rss/search?q=site%3Aswissinfo.ch&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NOS', 'country': 'World', 'type': 'news', 'website': 'https://nos.nl/', 'feed': 'https://news.google.com/rss/search?q=site%3Anos.nl&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'NRC', 'country': 'World', 'type': 'news', 'website': 'https://nrc.nl/', 'feed': 'https://news.google.com/rss/search?q=site%3Anrc.nl&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Politico Europe', 'country': 'World', 'type': 'news', 'website': 'https://politico.eu/', 'feed': 'https://news.google.com/rss/search?q=site%3Apolitico.eu&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'EUobserver', 'country': 'World', 'type': 'news', 'website': 'https://euobserver.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aeuobserver.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Radio Free Europe', 'country': 'World', 'type': 'news', 'website': 'https://rferl.org/', 'feed': 'https://news.google.com/rss/search?q=site%3Arferl.org&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Voice of America', 'country': 'World', 'type': 'news', 'website': 'https://voanews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Avoanews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Defense News', 'country': 'World', 'type': 'news', 'website': 'https://defensenews.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Adefensenews.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Foreign Policy', 'country': 'World', 'type': 'news', 'website': 'https://foreignpolicy.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aforeignpolicy.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Foreign Affairs', 'country': 'World', 'type': 'news', 'website': 'https://foreignaffairs.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aforeignaffairs.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'The Diplomat', 'country': 'World', 'type': 'news', 'website': 'https://thediplomat.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Athediplomat.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Al-Monitor', 'country': 'World', 'type': 'news', 'website': 'https://al-monitor.com/', 'feed': 'https://news.google.com/rss/search?q=site%3Aal-monitor.com&hl=ar&gl=IQ&ceid=IQ%3Aar'},
+    {'name': 'Middle East Eye', 'country': 'World', 'type': 'news', 'website': 'https://middleeasteye.net/', 'feed': 'https://news.google.com/rss/search?q=site%3Amiddleeasteye.net&hl=ar&gl=IQ&ceid=IQ%3Aar'},
 ]
 
-
-# ==================================================
-# دوال مساعدة
-# ==================================================
-
 def get_rss_sources():
-    """إرجاع المصادر التي لديها RSS فعلي."""
-    return [
-        source for source in SOURCES
-        if source.get("feed")
-    ]
-
+    return [source for source in SOURCES if source.get('feed')]
 
 def get_web_sources():
-    """إرجاع المصادر التي لا تملك RSS وتحتاج جلباً من الموقع."""
-    return [
-        source for source in SOURCES
-        if not source.get("feed") and source.get("website")
-    ]
-
+    return [source for source in SOURCES if source.get('website')]
 
 def get_sources_by_country(country):
-    """إرجاع المصادر حسب المنطقة."""
-    return [
-        source for source in SOURCES
-        if source.get("country") == country
-    ]
-
+    return [source for source in SOURCES if source.get('country') == country]
 
 def get_source_count():
-    """عدد المصادر."""
     return len(SOURCES)
