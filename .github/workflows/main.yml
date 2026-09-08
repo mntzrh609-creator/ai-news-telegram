@@ -6,7 +6,6 @@ on:
 
   workflow_dispatch:
 
-# يمنع تشغيلين متداخلين من الكتابة على seen_news.json في الوقت نفسه.
 concurrency:
   group: telegram-news-bot
   cancel-in-progress: false
@@ -38,16 +37,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: python main.py
 
-      - name: حفظ سجل الأخبار المنشورة
+      - name: حفظ سجلات النظام
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add seen_news.json
+          git add seen_news.json openai_state.json
 
           if git diff --cached --quiet; then
-            echo "ℹ️ لا يوجد تغيير في سجل الأخبار"
+            echo "ℹ️ لا يوجد تغيير في سجلات النظام"
           else
-            git commit -m "تحديث سجل الأخبار المنشورة"
+            git commit -m "تحديث سجلات بوت الأخبار"
             git push
           fi
