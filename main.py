@@ -2,57 +2,147 @@ import os
 import re
 import json
 import hashlib
-import calendar
 from datetime import datetime, timezone, timedelta
 from difflib import SequenceMatcher
 from urllib.parse import urlparse
 
 import requests
 import feedparser
+
 from sources import SOURCES
+
+
+# ============================================================
+# إعدادات النظام
+# ============================================================
 
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6-luna").strip()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-CHANNEL = "@MH999R"
+CHANNEL = os.getenv("TELEGRAM_CHANNEL", "@MH999R").strip()
 
 MAX_NEWS_PER_SOURCE = 8
 MAX_POSTS_PER_RUN = 5
-MAX_CANDIDATES_PER_RUN = 30
-MAX_AGE_HOURS = 24
-MAX_SEEN_EVENTS = 2500
+MAX_CANDIDATES = 35
+MAX_AI_CALLS_PER_RUN = 8
+
+# المقال يجب أن يكون حديثاً. إذا لم يرسل RSS تاريخاً، لا نرفضه تلقائياً.
+MAX_AGE_HOURS = 12
+
 SEEN_FILE = "seen_news.json"
-OPENAI_STATE_FILE = "openai_state.json"
-OPENAI_COOLDOWN_MINUTES = 10
+MAX_SEEN_IDS = 6000
+MAX_SEEN_EVENTS = 3000
 
-IRAN_US = ["إيران","ايران","طهران","ترامب","ترمب","خامنئي","أمريكا","امريكا","الولايات المتحدة","واشنطن","البنتاغون","البيت الأبيض","الحرس الثوري","إسرائيل","اسرائيل","مضيق هرمز","هرمز","البرنامج النووي","منشأة نووية"]
-IRAQ = ["العراق","بغداد","كربلاء","النجف","البصرة","نينوى","الأنبار","الانبار","كركوك","أربيل","اربيل","السليمانية","البرلمان العراقي","الحكومة العراقية","رئيس الوزراء العراقي","مجلس الوزراء","الجيش العراقي","الحشد الشعبي"]
-WORLD = ["روسيا","أوكرانيا","الصين","تايوان","إسرائيل","اسرائيل","غزة","فلسطين","لبنان","سوريا","اليمن","السعودية","تركيا","الأردن","مصر","الناتو","الأمم المتحدة","مجلس الأمن"]
-POLITICAL = ["حكومة","رئيس","رئاسة","برلمان","انتخابات","وزير","وزارة","حزب","كتلة","سياسي","سياسية","مفاوضات","اتفاق","عقوبات","أزمة","حرب","هجوم","ضربة","قصف","صاروخ","مسيّرة","مسيرة","هدنة","دبلوماسي","مجلس الأمن"]
-BREAKING = ["عاجل","الآن","قبل قليل","هجوم","ضربة","قصف","استهداف","مقتل","اغتيال","انفجار","صاروخ","صواريخ","مسيرة","مسيّرة","اشتباك","اعتراض","تصعيد","طوارئ","تهديد","تحذير"]
-IMPACT = ["حرب","هجوم","ضربة","قصف","صاروخ","صواريخ","مسيّرة","مسيرة","اغتيال","مقتل","انفجار","اشتباك","تصعيد","هدنة","وقف إطلاق النار","اتفاق","عقوبات","انسحاب","إغلاق","مضيق هرمز","منشأة نووية","عملية عسكرية","حالة طوارئ","إعلان الحرب"]
-SENIOR = ["ترامب","خامنئي","الرئيس الأمريكي","رئيس الوزراء العراقي","رئيس الجمهورية","وزير الخارجية","وزير الدفاع","الحرس الثوري","البنتاغون","البيت الأبيض","مجلس الأمن","الأمم المتحدة"]
-ROUTINE = ["يبحث","بحث","يناقش","ناقش","استقبل","يستقبل","التقى","يلتقي","أعرب عن"]
 
-STOP = {"من","في","على","الى","إلى","عن","مع","هذا","هذه","ذلك","تلك","بعد","قبل","خلال","حول","ان","إن","تم","قد","وقال","وقالت","وأكد","مصدر","مصادر","اليوم","الان","الآن","التي","الذي","كما","بين","لدى","فيما","أنه","إنه","كانت","كان","يكون","يتم","وسط","نحو","أمام","ضمن","عبر","وفق","بسبب","أثناء","أمس"}
-GENERIC = {"خبر","أخبار","آخر","اخر","الجديد","الجديدة","تفاصيل","تطورات","تصريحات","يعلن","تعلن","اعلن","أعلن","قال","تقول","بحسب","صحيفة","وكالة","اليوم"}
+# ============================================================
+# الكلمات والموضوعات
+# ============================================================
+
+IRAN_US = [
+    "إيران", "ايران", "الإيراني", "الايراني", "الإيرانية", "الايرانية",
+    "طهران", "ترامب", "ترمب", "أمريكا", "امريكا", "الولايات المتحدة",
+    "واشنطن", "البنتاغون", "البنتاجون", "البيت الأبيض", "البيت الابيض",
+    "الحرس الثوري", "مضيق هرمز", "هرمز", "القوات الأمريكية",
+    "القوات الامريكية", "القواعد الأمريكية", "القواعد الامريكية",
+    "منشأة نووية", "منشاة نووية", "البرنامج النووي", "نووي",
+]
+
+IRAQ_WORDS = [
+    "العراق", "العراقي", "العراقية", "بغداد", "كربلاء", "النجف",
+    "البصرة", "نينوى", "الأنبار", "الانبار", "كركوك", "أربيل", "اربيل",
+    "السليمانية", "البرلمان العراقي", "الحكومة العراقية",
+    "رئيس الوزراء العراقي", "مجلس الوزراء", "الجيش العراقي",
+    "الحشد الشعبي", "وزارة الداخلية العراقية", "وزارة الدفاع العراقية",
+]
+
+ARAB_WORDS = [
+    "اليمن", "الحوثي", "الحوثيين", "السعودية", "لبنان", "سوريا", "سورية",
+    "غزة", "فلسطين", "إسرائيل", "اسرائيل", "الأردن", "الاردن",
+    "مصر", "قطر", "الإمارات", "الامارات", "تركيا", "ليبيا", "السودان",
+]
+
+WORLD_WORDS = [
+    "روسيا", "أوكرانيا", "اوكرانيا", "الصين", "تايوان", "الناتو",
+    "الأمم المتحدة", "الامم المتحدة", "مجلس الأمن", "مجلس الامن",
+    "أوروبا", "اوروبا", "كوريا", "اليابان", "الهند", "باكستان",
+]
+
+IMPACT_WORDS = [
+    "حرب", "هجوم", "ضربة", "قصف", "غارات", "استهداف", "صاروخ",
+    "صواريخ", "مسيرة", "مسيّرة", "اعتراض", "اشتباك", "تصعيد",
+    "انفجار", "مقتل", "اغتيال", "إصابة", "اصابة", "احتلال",
+    "انسحاب", "إغلاق", "اغلاق", "حصار", "هدنة", "وقف إطلاق النار",
+    "وقف اطلاق النار", "اتفاق", "اتفاقية", "عقوبات", "طوارئ",
+    "حالة طوارئ", "تعبئة", "عملية عسكرية", "عملية عسكريه",
+    "قاعدة عسكرية", "منشأة نووية", "منشاة نووية", "مضيق هرمز",
+]
+
+SENIOR_WORDS = [
+    "ترامب", "ترمب", "خامنئي", "الرئيس الأمريكي", "الرئيس الامريكي",
+    "رئيس الوزراء العراقي", "رئيس الجمهورية", "وزير الخارجية",
+    "وزير الدفاع", "الحرس الثوري", "البنتاغون", "البيت الأبيض",
+    "البيت الابيض", "مجلس الأمن", "مجلس الامن", "الأمم المتحدة",
+]
+
+BREAKING_WORDS = [
+    "عاجل", "الآن", "الان", "قبل قليل", "هجوم", "ضربة", "قصف",
+    "استهداف", "مقتل", "اغتيال", "انفجار", "صاروخ", "صواريخ",
+    "مسيرة", "مسيّرة", "اشتباك", "اعتراض", "تصعيد", "طوارئ",
+]
+
+ROUTINE_WORDS = [
+    "يبحث", "بحث", "يناقش", "ناقش", "استقبل", "يستقبل", "التقى",
+    "يلتقي", "أعرب عن", "اعرب عن", "يؤكد أهمية", "تعزيز التعاون",
+]
+
+GENERIC_WORDS = {
+    "خبر", "أخبار", "اخبار", "آخر", "اخر", "الجديد", "الجديدة",
+    "تفاصيل", "تطورات", "تصريحات", "تصريح", "يعلن", "تعلن", "اعلن",
+    "أعلن", "قال", "تقول", "بحسب", "مصدر", "مصادر", "صحيفة", "وكالة",
+    "اليوم", "الان", "الآن", "عبر", "حول", "بشأن", "بعد", "قبل",
+    "خلال", "نحو", "وسط", "ضمن", "لدى", "مع", "من", "في", "على",
+    "الى", "إلى", "عن", "هذا", "هذه", "ذلك", "تلك",
+}
 
 session = requests.Session()
-session.headers.update({"User-Agent": "Mozilla/5.0 (compatible; AI-News-Bot/3.0)"})
+session.headers.update({
+    "User-Agent": "Mozilla/5.0 (compatible; AI-News-Bot/2.0)"
+})
+
+
+# ============================================================
+# أدوات النص
+# ============================================================
 
 def norm(text):
     text = (text or "").lower()
-    text = re.sub(r"https?://\S+|<[^>]+>", " ", text)
+    text = re.sub(r"https?://\S+", " ", text)
+    text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-    text = text.replace("أ","ا").replace("إ","ا").replace("آ","ا").replace("ٱ","ا").replace("ة","ه").replace("ى","ي")
+    text = (
+        text.replace("أ", "ا")
+            .replace("إ", "ا")
+            .replace("آ", "ا")
+            .replace("ٱ", "ا")
+            .replace("ة", "ه")
+            .replace("ى", "ي")
+    )
     text = re.sub(r"[^a-zA-Z0-9\u0600-\u06FF\s]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
+
 def words(text):
-    return {w for w in norm(text).split() if len(w) > 2 and w not in STOP and w not in GENERIC}
+    out = set()
+    for w in norm(text).split():
+        if len(w) <= 2 or w in GENERIC_WORDS:
+            continue
+        out.add(w)
+    return out
+
 
 def similarity(a, b):
-    a, b = norm(a), norm(b)
+    a = norm(a)
+    b = norm(b)
     if not a or not b:
         return 0.0
     seq = SequenceMatcher(None, a, b).ratio()
@@ -60,304 +150,794 @@ def similarity(a, b):
     overlap = len(aw & bw) / len(aw | bw) if aw and bw else 0.0
     return seq * 0.45 + overlap * 0.55
 
-def domain(source):
-    value = source.get("website", "") or source.get("feed", "")
+
+def contains_any(text, items):
+    t = norm(text)
+    return any(norm(x) in t for x in items)
+
+
+def count_hits(text, items):
+    t = norm(text)
+    return sum(1 for x in items if norm(x) in t)
+
+
+# ============================================================
+# المصادر والتصنيف
+# ============================================================
+
+def source_domain(source):
+    website = (source.get("website") or "").strip()
+    if not website:
+        return ""
     try:
-        return urlparse(value).netloc.lower().removeprefix("www.")
+        host = urlparse(website).netloc.lower().removeprefix("www.")
     except Exception:
-        return value.lower()
+        host = website.lower()
+    return host
+
 
 def source_family(source):
-    d = domain(source)
+    domain = source_domain(source)
     aliases = {
-        "bbc.com":"bbc","bbc.co.uk":"bbc","reuters.com":"reuters","apnews.com":"ap",
-        "afp.com":"afp","aljazeera.net":"aljazeera","alarabiya.net":"alarabiya",
-        "alhadath.net":"alarabiya","skynewsarabia.com":"skynews",
-        "france24.com":"france24","dw.com":"dw","euronews.com":"euronews",
-        "alhurra.com":"alhurra","rudaw.net":"rudaw","shafaq.com":"shafaq",
-        "alsumaria.tv":"alsumaria","un.org":"un","iaea.org":"iaea",
-        "whitehouse.gov":"whitehouse","state.gov":"state","defense.gov":"defense"
+        "alhurra.com": "alhurra",
+        "alhurra-iraq.com": "alhurra",
+        "alarabiya.net": "alarabiya",
+        "alhadath.net": "alarabiya",
+        "aljazeera.net": "aljazeera",
+        "reuters.com": "reuters",
+        "bbc.com": "bbc",
+        "bbc.co.uk": "bbc",
+        "skynewsarabia.com": "skynewsarabia",
+        "cnn.com": "cnn",
+        "rt.com": "rt",
+        "arabic.rt.com": "rt",
+        "france24.com": "france24",
+        "dw.com": "dw",
+        "euronews.com": "euronews",
+        "apnews.com": "ap",
+        "nytimes.com": "nytimes",
+        "washingtonpost.com": "washingtonpost",
+        "theguardian.com": "guardian",
+        "al-monitor.com": "almonitor",
+        "middleeasteye.net": "mee",
+        "aawsat.com": "aawsat",
+        "asharq.com": "asharq",
     }
-    if d in aliases:
-        return aliases[d]
+    if domain in aliases:
+        return aliases[domain]
     for key, value in aliases.items():
-        if d.endswith("." + key):
+        if domain.endswith("." + key):
             return value
-    return d
+    return domain or norm(source.get("name", ""))
 
-def source_tier(source):
-    d = domain(source)
-    t1 = ["reuters.com","apnews.com","afp.com","bbc.com","bbc.co.uk","cnn.com","nytimes.com","washingtonpost.com","theguardian.com","ft.com","wsj.com","aljazeera.net","un.org","iaea.org","whitehouse.gov","state.gov","defense.gov"]
-    t2 = ["alarabiya.net","alhadath.net","skynewsarabia.com","france24.com","dw.com","euronews.com","alhurra.com","rudaw.net","shafaq.com","alsumaria.tv"]
-    if any(d == x or d.endswith("." + x) for x in t1):
+
+def source_tier(article):
+    f = article.get("family", "")
+    tier1 = {
+        "reuters", "ap", "afp", "bbc", "cnn", "nytimes",
+        "washingtonpost", "guardian", "ft", "wsj",
+        "aljazeera", "un", "iaea", "whitehouse", "state",
+        "defense", "pentagon",
+    }
+    tier2 = {
+        "alarabiya", "skynewsarabia", "france24", "dw", "euronews",
+        "alhurra", "rudaw", "shafaq", "alsumaria", "asharq", "aawsat",
+        "rt", "almonitor", "mee",
+    }
+    if f in tier1:
         return 1
-    if any(d == x or d.endswith("." + x) for x in t2):
+    if f in tier2:
         return 2
     return 3
 
+
+def article_topic(article):
+    text = norm(article.get("title", "") + " " + article.get("summary", ""))
+
+    # مهم جداً: إيران-أمريكا فقط إذا ظهر سياق الطرفين أو سياق عسكري مباشر.
+    iran = contains_any(text, ["إيران", "ايران", "طهران", "الحرس الثوري", "خامنئي"])
+    us = contains_any(text, ["أمريكا", "امريكا", "الولايات المتحدة", "واشنطن", "ترامب", "البنتاغون"])
+    if iran and us:
+        return "Iran-US"
+
+    if contains_any(text, IRAQ_WORDS):
+        return "Iraq"
+    if contains_any(text, ARAB_WORDS):
+        return "Arab"
+    if contains_any(text, WORLD_WORDS):
+        return "World"
+
+    # إذا كان الخبر عن إيران مع عمل عسكري/نووي، يبقى ضمن الملف الإيراني
+    if iran and contains_any(text, IMPACT_WORDS):
+        return "Iran-US"
+
+    return "World"
+
+
+def article_id(article):
+    raw = "|".join([
+        article.get("family", ""),
+        article.get("title", ""),
+        article.get("link", ""),
+    ])
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def published_time(entry):
-    parsed = entry.get("published_parsed") or entry.get("updated_parsed") or entry.get("created_parsed")
+    parsed = (
+        entry.get("published_parsed")
+        or entry.get("updated_parsed")
+        or entry.get("created_parsed")
+    )
     if parsed:
         try:
+            import calendar
             return datetime.fromtimestamp(calendar.timegm(parsed), tz=timezone.utc)
         except Exception:
             pass
     return None
 
-def article_text(a):
-    return (a.get("title","") + " " + a.get("summary","")).strip()
 
-def is_political(a):
-    text = norm(article_text(a))
-    return any(norm(k) in text for k in POLITICAL + IRAN_US + IRAQ)
+# ============================================================
+# الأهمية
+# ============================================================
 
-def topic(a):
-    text = norm(article_text(a))
-    if any(norm(k) in text for k in IRAN_US): return "Iran-US"
-    if any(norm(k) in text for k in IRAQ): return "Iraq"
-    if any(norm(k) in text for k in WORLD): return "World"
-    return "Other"
+def importance(article):
+    text = norm(article.get("title", "") + " " + article.get("summary", ""))
+    score = 0
 
-def importance(a):
-    text = norm(article_text(a))
-    score = {1:25,2:18,3:10}[a["tier"]]
-    score += min(sum(norm(k) in text for k in IRAN_US)*5,25)
-    score += min(sum(norm(k) in text for k in IRAQ)*3,12)
-    score += min(sum(norm(k) in text for k in IMPACT)*5,25)
-    score += min(sum(norm(k) in text for k in BREAKING)*3,15)
-    score += min(sum(norm(k) in text for k in SENIOR)*3,12)
-    if a.get("published_at"):
-        age = max(0,(datetime.now(timezone.utc)-a["published_at"]).total_seconds()/60)
-        score += max(0,12-int(age/30))
-    score -= min(sum(norm(k) in text for k in ROUTINE)*8,20)
-    return max(0,min(score,100))
+    tier = source_tier(article)
+    score += {1: 28, 2: 18, 3: 8}.get(tier, 0)
 
-def article_id(a):
-    raw = "|".join([a.get("family",""),a.get("title",""),a.get("link","")])
-    return hashlib.sha256(raw.encode()).hexdigest()
+    topic = article.get("topic", article_topic(article))
+    if topic == "Iran-US":
+        score += 22
+    elif topic == "Iraq":
+        score += 16
+    elif topic == "Arab":
+        score += 12
+    else:
+        score += 7
+
+    impact = count_hits(text, IMPACT_WORDS)
+    breaking = count_hits(text, BREAKING_WORDS)
+    senior = count_hits(text, SENIOR_WORDS)
+
+    score += min(impact * 5, 25)
+    score += min(breaking * 4, 16)
+    score += min(senior * 4, 16)
+
+    if contains_any(text, ROUTINE_WORDS):
+        score -= 8
+
+    if article.get("published_at"):
+        age = max(
+            0,
+            (datetime.now(timezone.utc) - article["published_at"]).total_seconds() / 3600
+        )
+        if age <= 1:
+            score += 15
+        elif age <= 3:
+            score += 11
+        elif age <= 6:
+            score += 7
+        elif age <= 12:
+            score += 3
+
+    return max(0, min(100, score))
+
+
+# ============================================================
+# فلترة الأخبار
+# ============================================================
+
+def is_relevant(article):
+    text = norm(article.get("title", "") + " " + article.get("summary", ""))
+
+    political = (
+        contains_any(text, IRAN_US)
+        or contains_any(text, IRAQ_WORDS)
+        or contains_any(text, ARAB_WORDS)
+        or contains_any(text, WORLD_WORDS)
+        or contains_any(text, IMPACT_WORDS)
+    )
+    if not political:
+        return False
+
+    # نستبعد أخبار العلاقات العامة الروتينية إذا لم تحمل أثراً واضحاً.
+    routine_only = (
+        contains_any(text, ROUTINE_WORDS)
+        and not contains_any(text, IMPACT_WORDS)
+        and not contains_any(text, BREAKING_WORDS)
+    )
+    if routine_only:
+        return False
+
+    return True
+
+
+def fetch_news():
+    result = []
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=MAX_AGE_HOURS)
+
+    rss_sources = [s for s in SOURCES if s.get("feed")]
+    print(f"📚 إجمالي المصادر: {len(rss_sources)}")
+
+    for source in rss_sources:
+        count = 0
+        try:
+            feed = feedparser.parse(source["feed"])
+
+            for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
+                title = (entry.get("title") or "").strip()
+                if not title:
+                    continue
+
+                published_at = published_time(entry)
+                if published_at and published_at < cutoff:
+                    continue
+
+                article = {
+                    "source": source.get("name", "مصدر"),
+                    "family": source_family(source),
+                    "tier": None,
+                    "country": source.get("country", ""),
+                    "type": source.get("type", "news"),
+                    "website": source.get("website", ""),
+                    "title": title,
+                    "summary": re.sub(r"<[^>]+>", " ", (entry.get("summary") or "")).strip(),
+                    "link": (entry.get("link") or "").strip(),
+                    "published_at": published_at,
+                }
+
+                if not is_relevant(article):
+                    continue
+
+                article["topic"] = article_topic(article)
+                article["tier"] = source_tier(article)
+                article["importance"] = importance(article)
+                article["_id"] = article_id(article)
+                result.append(article)
+                count += 1
+
+            print(f"🔎 {source.get('name','مصدر')}: {count} خبر سياسي حديث")
+
+        except Exception as exc:
+            print(f"❌ {source.get('name','مصدر')}: {exc}")
+
+    return result
+
+
+# ============================================================
+# الذاكرة ومنع التكرار
+# ============================================================
 
 def load_seen():
     try:
-        with open(SEEN_FILE,encoding="utf-8") as f:
+        with open(SEEN_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        if isinstance(data,dict):
-            return {"ids":set(data.get("ids",[])),"events":data.get("events",[])}
-        return {"ids":set(data if isinstance(data,list) else []),"events":[]}
     except Exception:
-        return {"ids":set(),"events":[]}
+        return {"ids": set(), "events": []}
+
+    if isinstance(data, list):
+        return {"ids": set(data), "events": []}
+
+    if not isinstance(data, dict):
+        return {"ids": set(), "events": []}
+
+    ids = set(data.get("ids", []))
+    events = data.get("events", [])
+    if not isinstance(events, list):
+        events = []
+
+    return {
+        "ids": ids,
+        "events": [x for x in events if isinstance(x, dict) and x.get("text")]
+    }
+
 
 def save_seen(seen):
-    with open(SEEN_FILE,"w",encoding="utf-8") as f:
-        json.dump({"version":4,"ids":list(seen["ids"])[-5000:],"events":seen["events"][-MAX_SEEN_EVENTS:]},f,ensure_ascii=False,indent=2)
+    data = {
+        "version": 3,
+        "ids": list(seen["ids"])[-MAX_SEEN_IDS:],
+        "events": seen["events"][-MAX_SEEN_EVENTS:],
+    }
+    with open(SEEN_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-def already_seen(a,seen):
-    if article_id(a) in seen["ids"]:
+
+def already_seen(article, seen):
+    if article.get("_id") in seen["ids"]:
         return True
+
+    current = article.get("title", "") + " " + article.get("summary", "")
+
     for old in seen["events"]:
-        if similarity(a.get("title",""),old.get("title","")) >= 0.86:
+        old_text = old.get("text", "")
+        if similarity(article.get("title", ""), old.get("title", "")) >= 0.90:
             return True
-        if similarity(article_text(a),old.get("text",old.get("title",""))) >= 0.83:
+        if similarity(current, old_text) >= 0.88:
             return True
+
     return False
 
-def fetch_news():
-    result=[]
-    cutoff=datetime.now(timezone.utc)-timedelta(hours=MAX_AGE_HOURS)
-    sources=[s for s in SOURCES if s.get("feed")]
-    print(f"📚 إجمالي المصادر: {len(sources)}")
-    for source in sources:
-        try:
-            feed=feedparser.parse(source["feed"])
-            count=0
-            for entry in feed.entries[:MAX_NEWS_PER_SOURCE]:
-                title=(entry.get("title") or "").strip()
-                if not title: continue
-                published_at=published_time(entry)
-                if published_at and published_at < cutoff: continue
-                a={
-                    "source":source.get("name",domain(source)),
-                    "family":source_family(source),
-                    "country":source.get("country",""),
-                    "website":source.get("website",""),
-                    "title":title,
-                    "summary":(entry.get("summary") or "").strip(),
-                    "link":(entry.get("link") or "").strip(),
-                    "published_at":published_at,
-                    "tier":source_tier(source)
-                }
-                if not is_political(a): continue
-                a["importance"]=importance(a)
-                a["_id"]=article_id(a)
-                result.append(a); count+=1
-            print(f"🔎 {source.get('name','مصدر')}: {count} خبر سياسي حديث")
-        except Exception as exc:
-            print(f"❌ {source.get('name','مصدر')}: {exc}")
-    return result
 
-def same_event(a,b):
-    if a["family"] == b["family"]: return False
-    title_score=similarity(a["title"],b["title"])
-    full_score=similarity(article_text(a),article_text(b))
-    common=words(article_text(a)) & words(article_text(b))
-    if title_score >= .86 or full_score >= .86: return True
-    event_words={norm(x) for x in IRAN_US+IRAQ+WORLD+IMPACT}
-    return full_score >= .72 and len(common & event_words) >= 3
+def remember_group(group, final_text, seen):
+    for article in group:
+        seen["ids"].add(article.get("_id"))
+
+    clean = re.sub(r"^🔴\s*", "", final_text).strip()
+    seen["events"].append({
+        "title": clean[:500],
+        "text": clean[:1200],
+        "time": datetime.now(timezone.utc).isoformat(),
+    })
+
+    seen["ids"] = set(list(seen["ids"])[-MAX_SEEN_IDS:])
+    seen["events"] = seen["events"][-MAX_SEEN_EVENTS:]
+
+
+# ============================================================
+# تجميع الأحداث
+# ============================================================
+
+EVENT_WORDS = {
+    "ايران", "ايراني", "طهران", "امريكا", "امريكي", "واشنطن",
+    "ترامب", "خامنئي", "اسرائيل", "غزه", "لبنان", "اليمن",
+    "الحوثيين", "العراق", "بغداد", "السعوديه", "سوريا",
+    "روسيا", "اوكرانيا", "الصين", "تايوان", "هجوم", "ضربه",
+    "قصف", "صاروخ", "صواريخ", "مسييره", "اعتراض", "اشتباك",
+    "مفاوضات", "هدنه", "عقوبات", "نووي", "هرمز", "حرس", "ثوري",
+    "قاعدة", "قوات", "اسرائيلي", "برلمان", "حكومه", "انتخابات",
+}
+
+
+def same_event(a, b):
+    # لا ندمج مؤسستين من نفس العائلة كأنهما مصدران مستقلان.
+    if a["family"] == b["family"]:
+        return False
+
+    # يجب أن يكون الموضوع العام نفسه.
+    if a.get("topic") != b.get("topic"):
+        return False
+
+    title_score = similarity(a["title"], b["title"])
+    full_score = similarity(
+        a["title"] + " " + a["summary"],
+        b["title"] + " " + b["summary"],
+    )
+
+    common = words(a["title"] + " " + a["summary"]) & words(
+        b["title"] + " " + b["summary"]
+    )
+    shared_event = common & EVENT_WORDS
+
+    if title_score >= 0.82:
+        return True
+    if full_score >= 0.82:
+        return True
+    if full_score >= 0.67 and len(shared_event) >= 3:
+        return True
+
+    return False
+
 
 def group_news(news):
-    ordered=sorted(news,key=lambda x:x["importance"],reverse=True)
-    groups=[]; used=set()
-    for i,a in enumerate(ordered):
-        if i in used: continue
-        group=[a]; used.add(i)
-        for j in range(i+1,len(ordered)):
-            if j not in used and same_event(a,ordered[j]):
-                group.append(ordered[j]); used.add(j)
+    ordered = sorted(news, key=lambda x: x["importance"], reverse=True)
+    groups = []
+    used = set()
+
+    for i, article in enumerate(ordered):
+        if i in used:
+            continue
+
+        group = [article]
+        used.add(i)
+
+        for j in range(i + 1, len(ordered)):
+            if j in used:
+                continue
+            if same_event(article, ordered[j]):
+                group.append(ordered[j])
+                used.add(j)
+
         groups.append(group)
+
     return groups
 
-def select_groups(groups):
-    candidates=[]
-    for group in groups:
-        score=max(a["importance"] for a in group)
-        families={a["family"] for a in group}
-        score=min(100,score+min(max(0,len(families)-1)*8,24))
-        text=norm(" ".join(a["title"] for a in group))
-        breaking=any(norm(k) in text for k in BREAKING)
-        impact=any(norm(k) in text for k in IMPACT)
-        t1=any(a["tier"]==1 for a in group)
-        t2=any(a["tier"]==2 for a in group)
-        verified=len(families)>=2 and score>=50
-        single_t1=len(families)==1 and t1 and score>=68 and (breaking or impact)
-        single_t2=len(families)==1 and t2 and score>=78 and breaking and impact
-        if verified or single_t1 or single_t2:
-            candidates.append((score,topic(group[0]),group))
-    # احتياط: إذا أسقطت الفلاتر الصارمة كل المرشحين، نُبقي الأخبار المهمة ذات المصدر القوي للمراجعة داخل حلقة النشر.
-    if len(candidates) < 8:
-        existing = {id(group) for _,_,group in candidates}
-        fallback=[]
-        for group in groups:
-            score=max(a["importance"] for a in group)
-            families={a["family"] for a in group}
-            t1=any(a["tier"]==1 for a in group)
-            if score >= 45 and families and t1:
-                fallback.append((score,topic(group[0]),group))
-        for item in sorted(fallback,key=lambda x:x[0],reverse=True):
-            if id(item[2]) not in existing:
-                candidates.append(item); existing.add(id(item[2]))
-            if len(candidates) >= 20: break
-    return sorted(candidates,key=lambda x:x[0],reverse=True)
 
-def diversify(items):
-    selected=[]; used=set()
-    counts={"Iran-US":0,"Iraq":0,"World":0,"Other":0}
-    remaining=list(items)
-    while remaining and len(selected)<MAX_CANDIDATES_PER_RUN:
-        best_i=None; best_v=None
-        for i,(score,tp,group) in enumerate(remaining):
-            fams={a["family"] for a in group}
-            value=score+(8 if counts[tp]==0 else 0)-(10 if counts[tp]>=2 else 0)+(12 if tp=="Iran-US" else 0)-(20 if fams & used else 0)
-            if best_v is None or value>best_v:
-                best_i,best_v=i,value
-        item=remaining.pop(best_i); selected.append(item)
-        counts[item[1]]+=1; used.update(a["family"] for a in item[2])
-    return selected
+def group_score(group):
+    families = {a["family"] for a in group}
+    best = max(a["importance"] for a in group)
 
-def openai_allowed():
-    if not OPENAI_KEY: return False
-    try:
-        with open(OPENAI_STATE_FILE,encoding="utf-8") as f: last=json.load(f).get("last_attempt")
-        if last and (datetime.now(timezone.utc)-datetime.fromisoformat(last)).total_seconds()/60 < OPENAI_COOLDOWN_MINUTES:
-            return False
-    except Exception: pass
-    return True
+    # التحقق المستقل يرفع الثقة.
+    corroboration = min(18, max(0, len(families) - 1) * 9)
 
-def openai_call(prompt):
-    if not openai_allowed(): return None
-    try:
-        with open(OPENAI_STATE_FILE,"w",encoding="utf-8") as f:
-            json.dump({"last_attempt":datetime.now(timezone.utc).isoformat()},f)
-        r=session.post("https://api.openai.com/v1/responses",headers={"Authorization":f"Bearer {OPENAI_KEY}","Content-Type":"application/json"},json={"model":OPENAI_MODEL,"input":prompt,"max_output_tokens":300},timeout=60)
-        print("🤖 OpenAI Status:",r.status_code)
-        if r.status_code != 200:
-            print(r.text); return None
-        data=r.json()
-        if data.get("output_text"): return data["output_text"].strip()
-        out=[]
-        for item in data.get("output",[]):
-            for c in item.get("content",[]):
-                if c.get("type")=="output_text" and c.get("text"): out.append(c["text"])
-        return "\n".join(out).strip() or None
-    except Exception as exc:
-        print("❌ OpenAI:",exc); return None
+    # مصدر Tier 1 داخل المجموعة.
+    if any(a["tier"] == 1 for a in group):
+        corroboration += 6
 
-def verify_event(group):
-    families={a["family"] for a in group}
-    if len(families)<2:
-        a=group[0]; text=norm(article_text(a))
-        return len(group)==1 and a["tier"]==1 and a["importance"]>=72 and any(norm(k) in text for k in BREAKING+IMPACT)
-    text="\n\n".join(f"المؤسسة: {a['source']}\nالعنوان: {a['title']}\nالتفاصيل: {a['summary']}" for a in group)
-    answer=openai_call(f"""أنت مدقق أخبار سياسية. هل المصادر التالية تؤكد الواقعة نفسها فعلاً؟ لا تدمج أحداثاً مختلفة. أجب فقط YES أو NO.\n\n{text}""")
-    if answer is None:
+    return min(100, best + corroboration)
+
+
+def is_publishable_candidate(group):
+    score = group_score(group)
+    families = {a["family"] for a in group}
+    has_t1 = any(a["tier"] == 1 for a in group)
+    has_t2 = any(a["tier"] == 2 for a in group)
+    text = " ".join(a["title"] + " " + a["summary"] for a in group)
+
+    impact = contains_any(text, IMPACT_WORDS)
+    breaking = contains_any(text, BREAKING_WORDS)
+    topic = group[0].get("topic")
+
+    # خبر مؤكد من مؤسستين مستقلتين.
+    if len(families) >= 2 and score >= 52 and (impact or breaking or topic in {"Iran-US", "Iraq"}):
         return True
-    return bool(re.search(r"\bYES\b",answer.upper()))
 
-def make_post(group):
-    lead=max(group,key=lambda a:a["importance"])
-    sources=", ".join(dict.fromkeys(a["source"] for a in group[:4]))
-    result=openai_call(f"""اكتب خبراً سياسياً عربياً قصيراً للنشر في تيليغرام. لا تضف أي معلومة غير موجودة. ابدأ بـ 🔴، واذكر المصدر. سطر أو سطران فقط.\nالمصادر: {sources}\nالعنوان: {lead['title']}\nالتفاصيل: {lead['summary']}""")
-    if result and result.startswith("🔴"):
-        return result[:1000]
-    detail=re.sub(r"\s+"," ",lead["summary"]).strip()
-    text=f"🔴 {lead['source']}: {lead['title']}"
-    return text + (f"؛ {detail[:450]}" if detail else "")
+    # خبر عاجل/عالي الأثر من Tier 1 واحد.
+    if len(families) == 1 and has_t1 and score >= 55 and (impact or breaking):
+        return True
+
+    # Tier 2 وحده يحتاج حدثاً شديد الأثر.
+    if len(families) == 1 and has_t2 and score >= 72 and impact and breaking:
+        return True
+
+    return False
+
+
+def rank_groups(groups):
+    candidates = [g for g in groups if is_publishable_candidate(g)]
+    candidates.sort(key=group_score, reverse=True)
+
+    # لا نمنع المرشح من الوصول للتحقق فقط لأن له نفس العائلة
+    # الموجودة في مرشح آخر؛ التنويع يتم بعد التأكد من الخبر.
+    return candidates[:MAX_CANDIDATES]
+
+
+# ============================================================
+# OpenAI: مكالمة واحدة للتحقق + التحرير
+# ============================================================
+
+def openai_text(data):
+    if data.get("output_text"):
+        return data["output_text"].strip()
+
+    chunks = []
+    for item in data.get("output", []):
+        if item.get("type") != "message":
+            continue
+        for content in item.get("content", []):
+            if content.get("type") == "output_text" and content.get("text"):
+                chunks.append(content["text"])
+    return "\n".join(chunks).strip() if chunks else None
+
+
+def openai_call(prompt, max_tokens=350):
+    if not OPENAI_KEY:
+        print("⚠️ OPENAI_API_KEY غير موجود — سيُستخدم التحقق المحلي.")
+        return None
+
+    try:
+        response = session.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {OPENAI_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_MODEL,
+                "input": prompt,
+                "max_output_tokens": max_tokens,
+            },
+            timeout=60,
+        )
+
+        print("🤖 OpenAI Status:", response.status_code)
+
+        if response.status_code != 200:
+            print(response.text[:1000])
+            return None
+
+        return openai_text(response.json())
+
+    except Exception as exc:
+        print("❌ OpenAI:", exc)
+        return None
+
+
+def build_ai_prompt(group):
+    rows = []
+    for a in sorted(group, key=lambda x: x["importance"], reverse=True):
+        age = ""
+        if a.get("published_at"):
+            age = a["published_at"].isoformat()
+        rows.append(
+            f"المؤسسة: {a['source']}\n"
+            f"العائلة: {a['family']}\n"
+            f"التصنيف: {a['topic']}\n"
+            f"الدرجة: {a['importance']}\n"
+            f"وقت المقال: {age}\n"
+            f"العنوان: {a['title']}\n"
+            f"التفاصيل: {a['summary'][:1200]}"
+        )
+
+    return f"""
+أنت محرر ومدقق أخبار سياسية محترف.
+
+المهمة:
+حلل المصادر التالية عن حدث واحد محتمل.
+
+أولاً:
+- قرر هل تتحدث المصادر فعلاً عن الواقعة نفسها، وليس مجرد الموضوع نفسه.
+- إذا كانت الوقائع مختلفة، أجب SKIP.
+- إذا كانت هناك روايتان متعارضتان للواقعة نفسها، لا تحذف التعارض؛ انسب كل ادعاء إلى صاحبه.
+- ميّز بين "قال/أعلن/ادعى" وبين الواقعة المؤكدة.
+- لا تعتبر مؤسستين من العائلة نفسها مصدرين مستقلين.
+- لا تخترع أي معلومة.
+- لا تستخدم معلومة غير موجودة في النص المقدم.
+
+ثانياً:
+لا تنشر إذا كان الخبر:
+- روتينياً أو بروتوكولياً بلا أثر سياسي واضح.
+- قديماً ولا يحتوي على تطور جديد واضح.
+- غير متعلق بحدث سياسي مهم.
+- مجرد رأي أو تعليق بلا تطور مهم.
+
+إذا كان صالحاً للنشر:
+اكتب منشوراً عربياً مختصراً جداً، صحفياً، دقيقاً، من سطر واحد أو سطرين كحد أقصى.
+
+الصيغة:
+🔴 اسم المصدر، اسم المصدر: نص الخبر
+
+قواعد الصياغة:
+- ابدأ دائماً بـ 🔴.
+- اذكر المصادر المستقلة التي تؤكد الواقعة.
+- إذا كانت المعلومة ادعاءً، استخدم "بحسب" أو "أعلنت" أو "قالت" أو "ادعت" بحسب النص.
+- إذا كان هناك رد أو نفي من الطرف الآخر، ضمه باختصار.
+- لا تضع روابط.
+- لا هاشتاغات.
+- لا تقل "المصدر:".
+- لا تضف مقدمة أو رأياً.
+- حافظ على الأرقام والأسماء.
+- لا تخلط حدثين مختلفين.
+- لا تعيد صياغة ادعاء على أنه حقيقة.
+
+أجب فقط:
+SKIP
+أو المنشور النهائي.
+
+المصادر:
+{chr(10).join(rows)}
+""".strip()
+
+
+def clean_final(text):
+    text = (text or "").strip()
+    text = re.sub(r"^```(?:text)?\s*", "", text, flags=re.I)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.replace("\n\n", "\n").strip()
+
+    if text.upper() == "SKIP":
+        return None
+
+    if not text.startswith("🔴"):
+        text = "🔴 " + text
+
+    # Telegram حد الرسالة 4096، ونبقي المنشور قصيراً.
+    return text[:3800].strip()
+
+
+# ============================================================
+# التحقق المحلي عند تعذر OpenAI
+# ============================================================
+
+def local_post(group):
+    families = {}
+    for a in sorted(group, key=lambda x: x["importance"], reverse=True):
+        families.setdefault(a["family"], a)
+
+    if len(families) >= 2:
+        selected = sorted(families.values(), key=lambda x: x["importance"], reverse=True)
+        names = [a["source"] for a in selected[:3]]
+        title = clean_title(selected[0]["title"])
+        if title:
+            return "🔴 " + "، ".join(names) + ": " + title
+
+    # Tier 1 single-source breaking event.
+    best = max(group, key=lambda x: x["importance"])
+    text = best["title"] + " " + best["summary"]
+    if best["tier"] == 1 and best["importance"] >= 55 and (
+        contains_any(text, IMPACT_WORDS) or contains_any(text, BREAKING_WORDS)
+    ):
+        return "🔴 " + best["source"] + ": " + clean_title(best["title"])
+
+    return None
+
+
+def clean_title(title):
+    text = (title or "").strip()
+    text = re.sub(r"\s+[-–—]\s+[^-–—]{2,70}$", "", text).strip()
+    text = re.sub(r"^(عاجل\s*[:：-]\s*)+", "", text, flags=re.I).strip()
+    return text
+
+
+def analyze_group(group, use_ai=True):
+    if use_ai:
+        result = openai_call(build_ai_prompt(group), max_tokens=350)
+        result = clean_final(result)
+        if result:
+            return result
+
+    return local_post(group)
+
+
+# ============================================================
+# Telegram
+# ============================================================
 
 def send(message):
     if not TELEGRAM_TOKEN:
-        print("❌ TELEGRAM_BOT_TOKEN غير موجود"); return False
-    try:
-        r=session.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",json={"chat_id":CHANNEL,"text":message,"disable_web_page_preview":False},timeout=30)
-        print("📨 Telegram Status:",r.status_code)
-        if r.status_code != 200: print(r.text); return False
-        return bool(r.json().get("ok"))
-    except Exception as exc:
-        print("❌ Telegram:",exc); return False
+        print("❌ TELEGRAM_BOT_TOKEN غير موجود.")
+        return False
 
-def remember_group(group,text,seen):
-    seen["ids"].update(article_id(a) for a in group)
-    clean=re.sub(r"^🔴\s*","",text).strip()
-    seen["events"].append({"title":clean,"text":clean,"time":datetime.now(timezone.utc).isoformat()})
-    save_seen(seen)
+    try:
+        response = session.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            data={
+                "chat_id": CHANNEL,
+                "text": message,
+                "disable_web_page_preview": True,
+            },
+            timeout=30,
+        )
+
+        print("📨 Telegram Status:", response.status_code)
+
+        if response.status_code != 200:
+            print(response.text[:1000])
+
+        return response.status_code == 200
+
+    except Exception as exc:
+        print("❌ Telegram:", exc)
+        return False
+
+
+# ============================================================
+# التشغيل
+# ============================================================
 
 def main():
-    print("="*70)
-    print("🚀 بدء تشغيل Telegram News Bot")
-    seen=load_seen()
-    all_news=fetch_news()
-    print(f"📰 مجموع الأخبار السياسية الحديثة: {len(all_news)}")
-    fresh=[a for a in all_news if not already_seen(a,seen)]
+    print("=" * 72)
+    print("🚀 Telegram News Bot — Event Intelligence v3")
+    print("🇮🇷🇺🇸 أولوية إيران ↔ أمريكا")
+    print("🇮🇶 العراق + 🌍 العرب + 🌎 العالم")
+    print(f"📢 سقف النشر: {MAX_POSTS_PER_RUN}")
+    print(f"🎯 سقف المرشحين: {MAX_CANDIDATES}")
+    print(f"🤖 سقف مكالمات AI: {MAX_AI_CALLS_PER_RUN}")
+    print(f"⏱️ حد حداثة المقال: {MAX_AGE_HOURS} ساعة")
+    print("=" * 72)
+
+    seen = load_seen()
+
+    all_news = fetch_news()
+    print(f"\n📰 الأخبار السياسية الحديثة: {len(all_news)}")
+
+    fresh = [a for a in all_news if not already_seen(a, seen)]
     print(f"🆕 بعد منع التكرار: {len(fresh)}")
+
     if not fresh:
-        save_seen(seen); print("ℹ️ لا توجد أخبار جديدة."); return
-    groups=group_news(fresh)
-    print(f"🧩 عدد مجموعات الأحداث: {len(groups)}")
-    candidates=select_groups(groups)
-    print(f"🎯 بعد الفلترة: {len(candidates)}")
-    selected=diversify(candidates)
-    print(f"📌 المجموعات المختارة للمحاولة: {len(selected)} (السقف الفعلي للنشر {MAX_POSTS_PER_RUN})")
-    published=0; fingerprints=[]
-    for index,(_,tp,group) in enumerate(selected,1):
-        print(f"\n🔎 المجموعة {index} | {tp}")
-        for a in group: print(f"• {a['source']} | {a['title']} | أهمية {a['importance']}")
-        if not verify_event(group): continue
-        result=make_post(group)
-        body=re.sub(r"^🔴\s*","",result).strip()
-        if any(similarity(body,old)>=.78 for old in fingerprints): continue
+        save_seen(seen)
+        print("ℹ️ لا توجد أخبار جديدة.")
+        return
+
+    groups = group_news(fresh)
+    print(f"🧩 مجموعات الأحداث: {len(groups)}")
+
+    candidates = rank_groups(groups)
+    print(f"🎯 المرشحون بعد الأهمية: {len(candidates)}")
+
+    # ترتيب صارم مع محاولة إعطاء أولوية للأحداث المدعومة بمصادر متعددة.
+    candidates.sort(
+        key=lambda g: (
+            len({a["family"] for a in g}) >= 2,
+            group_score(g),
+            max(a["importance"] for a in g),
+        ),
+        reverse=True,
+    )
+
+    published = 0
+    ai_calls = 0
+    published_fingerprints = []
+    used_topics = set()
+    stats = {
+        "checked": 0,
+        "ai": 0,
+        "local": 0,
+        "rejected": 0,
+        "telegram_failed": 0,
+    }
+
+    for index, group in enumerate(candidates, start=1):
+        if published >= MAX_POSTS_PER_RUN:
+            break
+
+        stats["checked"] += 1
+
+        print("\n" + "=" * 72)
+        print(
+            f"🔎 مرشح {index}/{len(candidates)} | "
+            f"الموضوع: {group[0]['topic']} | "
+            f"الدرجة: {group_score(group)} | "
+            f"المصادر المستقلة: {len({a['family'] for a in group})}"
+        )
+
+        for a in sorted(group, key=lambda x: x["importance"], reverse=True):
+            print(
+                f"• {a['source']} | {a['topic']} | "
+                f"{a['importance']} | {a['title']}"
+            )
+
+        # تنويع خفيف فقط؛ لا نسقط خبراً إيرانياً مهماً لمجرد وجود خبر سابق من نفس الفئة.
+        topic = group[0]["topic"]
+        if topic in used_topics and published < 3:
+            # لا نرفض الخبر؛ فقط نؤجله قليلاً إذا توجد خيارات أخرى.
+            print("ℹ️ الموضوع مستخدم سابقاً، لكن سيُفحص لأن الجودة أهم من التنويع.")
+
+        use_ai = ai_calls < MAX_AI_CALLS_PER_RUN and bool(OPENAI_KEY)
+        if use_ai:
+            ai_calls += 1
+            stats["ai"] += 1
+        else:
+            stats["local"] += 1
+
+        try:
+            result = analyze_group(group, use_ai=use_ai)
+        except Exception as exc:
+            print("❌ خطأ في تحليل المجموعة:", exc)
+            result = local_post(group)
+
+        if not result:
+            stats["rejected"] += 1
+            print("⏭️ مرفوض: غير مؤكد/غير مهم/حدث مختلف.")
+            continue
+
+        body = re.sub(r"^🔴\s*", "", result).strip()
+        if any(similarity(body, old) >= 0.80 for old in published_fingerprints):
+            print("⛔ مكرر داخل التشغيل.")
+            stats["rejected"] += 1
+            continue
+
+        print("\n📢 الخبر النهائي:")
+        print(result)
+
         if send(result):
-            published+=1; fingerprints.append(body); remember_group(group,result,seen)
-            print(f"✅ تم نشر الخبر {published}/{MAX_POSTS_PER_RUN}")
-        if published>=MAX_POSTS_PER_RUN: break
+            published += 1
+            published_fingerprints.append(body)
+            used_topics.add(topic)
+            remember_group(group, result, seen)
+            save_seen(seen)
+            print(f"✅ نُشر: {published}/{MAX_POSTS_PER_RUN}")
+        else:
+            stats["telegram_failed"] += 1
+            print("❌ فشل Telegram — ننتقل للمرشح التالي.")
+
     save_seen(seen)
-    print(f"🎉 انتهى التشغيل. عدد المنشورات الناجحة: {published}")
+
+    print("\n" + "=" * 72)
+    print("📊 إحصائيات التشغيل")
+    print(f"🔎 فُحص: {stats['checked']}")
+    print(f"🤖 AI: {stats['ai']}")
+    print(f"🧩 محلي: {stats['local']}")
+    print(f"⏭️ مرفوض: {stats['rejected']}")
+    print(f"❌ فشل Telegram: {stats['telegram_failed']}")
+    print(f"📨 نُشر بنجاح: {published}/{MAX_POSTS_PER_RUN}")
+    print("🎉 انتهى التشغيل.")
+    print("=" * 72)
+
 
 if __name__ == "__main__":
     main()
