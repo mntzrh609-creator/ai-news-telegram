@@ -2,8 +2,10 @@ name: Telegram News Bot
 
 on:
   schedule:
+    # تشغيل كل 5 دقائق، طوال 24 ساعة
     - cron: "*/5 * * * *"
 
+  # تشغيل يدوي عند الحاجة
   workflow_dispatch:
 
 concurrency:
@@ -18,10 +20,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: تحميل الملفات
+      - name: تحميل المستودع
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: إعداد Python
         uses: actions/setup-python@v5
@@ -29,33 +29,27 @@ jobs:
           python-version: "3.12"
 
       - name: تثبيت المكتبات
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
-      - name: تشغيل نظام الأخبار
+      - name: تشغيل بوت الأخبار
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        run: python main.py
+        run: |
+          python main.py
 
-      - name: حفظ سجلات النظام
+      - name: حفظ سجل الأخبار
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [ ! -f seen_news.json ]; then
-            echo '{"version":3,"ids":[],"events":[]}' > seen_news.json
-          fi
-
-          if [ ! -f openai_state.json ]; then
-            echo '{"last_attempt":null}' > openai_state.json
-          fi
-
-          git add seen_news.json openai_state.json
+          git add seen_news.json openai_state.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
-            echo "ℹ️ لا يوجد تغيير في سجلات النظام"
+            echo "لا توجد تغييرات للحفظ"
           else
-            git commit -m "تحديث سجلات بوت الأخبار"
+            git commit -m "Update news state"
             git push
           fi
