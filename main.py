@@ -18,6 +18,7 @@ CHANNEL = "@MH999R"
 
 MAX_NEWS_PER_SOURCE = 8
 MAX_POSTS_PER_RUN = 5
+MAX_CANDIDATES_PER_RUN = 30
 MAX_AGE_HOURS = 24
 MAX_SEEN_EVENTS = 2500
 SEEN_FILE = "seen_news.json"
@@ -225,18 +226,32 @@ def select_groups(groups):
         impact=any(norm(k) in text for k in IMPACT)
         t1=any(a["tier"]==1 for a in group)
         t2=any(a["tier"]==2 for a in group)
-        verified=len(families)>=2 and score>=55
-        single_t1=len(families)==1 and t1 and score>=72 and (breaking or impact)
-        single_t2=len(families)==1 and t2 and score>=82 and breaking and impact
+        verified=len(families)>=2 and score>=50
+        single_t1=len(families)==1 and t1 and score>=68 and (breaking or impact)
+        single_t2=len(families)==1 and t2 and score>=78 and breaking and impact
         if verified or single_t1 or single_t2:
             candidates.append((score,topic(group[0]),group))
+    # احتياط: إذا أسقطت الفلاتر الصارمة كل المرشحين، نُبقي الأخبار المهمة ذات المصدر القوي للمراجعة داخل حلقة النشر.
+    if len(candidates) < 8:
+        existing = {id(group) for _,_,group in candidates}
+        fallback=[]
+        for group in groups:
+            score=max(a["importance"] for a in group)
+            families={a["family"] for a in group}
+            t1=any(a["tier"]==1 for a in group)
+            if score >= 45 and families and t1:
+                fallback.append((score,topic(group[0]),group))
+        for item in sorted(fallback,key=lambda x:x[0],reverse=True):
+            if id(item[2]) not in existing:
+                candidates.append(item); existing.add(id(item[2]))
+            if len(candidates) >= 20: break
     return sorted(candidates,key=lambda x:x[0],reverse=True)
 
 def diversify(items):
     selected=[]; used=set()
     counts={"Iran-US":0,"Iraq":0,"World":0,"Other":0}
     remaining=list(items)
-    while remaining and len(selected)<MAX_POSTS_PER_RUN:
+    while remaining and len(selected)<MAX_CANDIDATES_PER_RUN:
         best_i=None; best_v=None
         for i,(score,tp,group) in enumerate(remaining):
             fams={a["family"] for a in group}
@@ -328,7 +343,7 @@ def main():
     candidates=select_groups(groups)
     print(f"🎯 بعد الفلترة: {len(candidates)}")
     selected=diversify(candidates)
-    print(f"📌 المجموعات المختارة: {len(selected)}")
+    print(f"📌 المجموعات المختارة للمحاولة: {len(selected)} (السقف الفعلي للنشر {MAX_POSTS_PER_RUN})")
     published=0; fingerprints=[]
     for index,(_,tp,group) in enumerate(selected,1):
         print(f"\n🔎 المجموعة {index} | {tp}")
